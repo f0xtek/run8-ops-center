@@ -103,4 +103,4 @@
   - manual saves and auto-saves are each ingested within 10 s;
   - an auto-save from a different world is rejected with a warning;
   - no files in the Run8 folders change.
-- [ ] 11.3 Write a `README.md` covering build, run flags (`--save` required, `--save-dir`, `--autosave-dir`, `--data`, `--no-browser`), first-run learn mode workflow and the order lifecycle. Read `skill://unslop` before writing, and run the finished file through it. Verify that the documented commands run as written and that the unslop pass was applied.
+- [x] 11.3 Write a `README.md` covering build, run flags (`--save` required, `--save-dir`, `--autosave-dir`, `--data`, `--no-browser`), first-run learn mode workflow and the order lifecycle. Read `skill://unslop` before writing, and run the finished file through it. Verify that the documented commands run as written and that the unslop pass was applied.
