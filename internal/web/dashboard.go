@@ -1,7 +1,9 @@
 package web
 
 import (
+	"errors"
 	"fmt"
+	"io/fs"
 	"net/http"
 	"sort"
 	"strings"
@@ -11,11 +13,12 @@ import (
 	"run8-ops-center/internal/engine"
 	"run8-ops-center/internal/orders"
 	"run8-ops-center/internal/profile"
+	"run8-ops-center/internal/run8route"
 )
 
 // dashAttn is one entry of the attention list.
 type dashAttn struct {
-	Kind     string // "warning", "profile", "unmapped", "unknown-tag", "unknown-type"
+	Kind     string // "warning", "profile", "run8-file", "run8-changed", "run8-available", "unmapped", "unknown-tag", "unknown-type"
 	Label    string
 	Text     string
 	Time     time.Time
@@ -181,12 +184,40 @@ func dashSorted(set map[string]bool) []string {
 }
 
 // dashAttention builds the attention list: ingest warnings, profile validation
-// problems, unmapped cars and cars with an unknown tag or type. The header's warning
-// count is its length.
+// problems, Run8 route files that could not be used, the Run8 track data notice,
+// unmapped cars and cars with an unknown tag or type. The header's warning count is
+// its length.
 func dashAttention(v *engine.View) []dashAttn {
 	var out []dashAttn
 	for _, w := range v.Warnings {
+		if w.Kind == dashRun8Warning {
+			continue // listed below from Run8.Unavailable, with a link
+		}
 		out = append(out, dashAttn{Kind: "warning", Label: w.Kind, Text: w.Message, Time: w.Time})
+	}
+	for _, f := range v.Run8.Unavailable {
+		out = append(out, dashAttn{
+			Kind: "run8-file", Label: "Run8 file",
+			Text: fmt.Sprintf("%s could not be used: %s.", f.Path, dashFileReason(f)),
+			Link: "/learn#import", LinkText: "Import from Run8",
+		})
+	}
+	switch {
+	case v.Run8.Changed:
+		text := "The Run8 track data changed since the last import."
+		if !v.Run8.LastImport.IsZero() {
+			text = fmt.Sprintf("The Run8 track data changed since the last import on %s.", v.Run8.LastImport.Format("2 Jan 2006"))
+		}
+		out = append(out, dashAttn{
+			Kind: "run8-changed", Label: "Run8 track data", Text: text + " Review a new import to pick up the changes.",
+			Link: "/learn#import", LinkText: "Review the import",
+		})
+	case v.Run8.ImportAvailable:
+		out = append(out, dashAttn{
+			Kind: "run8-available", Label: "Run8 track data",
+			Text: "Run8 track data can be imported. It labels industry, bowl and receiving tracks for you.",
+			Link: "/learn#import", LinkText: "Review the import",
+		})
 	}
 	if v.Profile != nil {
 		for _, pr := range v.Profile.Report.Problems {
@@ -235,6 +266,23 @@ func dashAttention(v *engine.View) []dashAttn {
 		}
 	}
 	return out
+}
+
+// dashRun8Warning is the engine's Warning.Kind for an unusable Run8 route file.
+const dashRun8Warning = "run8"
+
+// dashFileReason is why a route file could not be used, without the "open <path>:"
+// prefix of a file error, since the item names the path itself.
+func dashFileReason(f run8route.FileStatus) string {
+	var pe *fs.PathError
+	switch {
+	case f.Err == nil:
+		return "unknown error"
+	case errors.As(f.Err, &pe):
+		return pe.Err.Error()
+	default:
+		return f.Err.Error()
+	}
 }
 
 // dashViewOf returns the backend's current View, or an empty one if it has none.

@@ -1,0 +1,88 @@
+{{define "main"}}
+<style>
+.imp-counts{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px}
+.imp-group{border:1px solid var(--rule);border-radius:6px;padding:8px 10px;background:var(--card)}
+.imp-group summary{cursor:pointer;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.imp-group[open] summary{margin-bottom:8px}
+.imp-list{list-style:none;margin:0 0 8px;padding:0;display:flex;gap:4px 12px;flex-wrap:wrap;font-family:var(--mono);font-size:12px}
+.imp-list li{border:1px solid var(--rule);border-radius:4px;padding:1px 6px}
+.imp-err{border-left:4px solid var(--warn);background:var(--soft);padding:10px 14px}
+</style>
+{{with .Data}}
+<section class="card" aria-labelledby="imp-h">
+  <h2 id="imp-h">Import preview</h2>
+  <p class="muted" style="max-width:70ch">Nothing has been changed yet. This is what confirming would do to the track map. Labels you made by hand are never touched.</p>
+  <div class="imp-counts">
+    <div class="tile"><b>{{.Counts.New}}</b><span>New labels</span></div>
+    <div class="tile"><b>{{.Counts.Changed}}</b><span>Changed labels</span></div>
+    <div class="tile"><b>{{.Counts.Removed}}</b><span>Removed labels</span></div>
+    <div class="tile"><b>{{.Counts.KeptManual}}</b><span>Kept manual</span></div>
+    <div class="tile"><b>{{.Counts.Skipped}}</b><span>Skipped items</span></div>
+    <div class="tile"><b>{{.Counts.Unchanged}}</b><span>Unchanged</span></div>
+  </div>
+  <p class="muted">Counts are in track sections, except the skipped items. New labels go on sections with no label. A changed label is an earlier import's label that the Run8 data now sets differently. A removed label is one an earlier import made that the Run8 data no longer asks for.</p>
+  <form method="post" action="/trackmap/import/confirm" data-async>
+    <input type="hidden" name="token" value="{{.Token}}">
+    <div class="row">
+      <button type="submit" class="primary">Confirm the import{{if .Counts.Apply}} ({{.Counts.Apply}} section{{if ne .Counts.Apply 1}}s{{end}}){{end}}</button>
+      <a class="btn" href="/learn#import">Cancel</a>
+    </div>
+  </form>
+  {{if not .Counts.Apply}}<p class="muted">No label would change. Confirming still records the Run8 files as imported, which clears the track data notice.</p>{{end}}
+</section>
+
+{{if .Unusable}}
+<section class="card" id="import-unusable" aria-labelledby="imp-uh">
+  <h3 id="imp-uh">Files that could not be used</h3>
+  <p class="muted">The import was built from the files that could be read. Whatever depends on the others is missing from the preview.</p>
+  <ul>{{range .Unusable}}<li><span class="mono">{{.Path}}</span>: {{.Reason}}</li>{{end}}</ul>
+</section>
+{{end}}
+
+{{if .Unavailable}}
+<section class="card" id="import-unavailable" aria-labelledby="imp-nh">
+  <h3 id="imp-nh">Not built</h3>
+  <ul>{{range .Unavailable}}<li>{{.}}</li>{{end}}</ul>
+</section>
+{{end}}
+
+<section class="card" id="import-groups" aria-labelledby="imp-gh">
+  <h3 id="imp-gh">Locations</h3>
+  {{if not .Groups}}
+  <p class="empty">No location gains, changes or loses a label.{{if .Quiet}} {{.Quiet}} location{{if ne .Quiet 1}}s are{{else}} is{{end}} already as the import would set {{if ne .Quiet 1}}them{{else}}it{{end}}.{{end}}</p>
+  {{else}}
+  <p class="muted">{{len .Groups}} location{{if ne (len .Groups) 1}}s{{end}} to change{{if .Quiet}}; {{.Quiet}} more already match{{end}}. Open a location to see its sections.</p>
+  {{end}}
+  {{range .Groups}}
+  <details class="imp-group">
+    <summary>
+      <b>{{.Name}}</b> <span class="chip wait">{{.Kind}}</span>
+      <span class="muted">{{with .New}}{{len .}} new{{end}}{{with .Changed}} {{len .}} changed{{end}}{{with .Removed}} {{len .}} removed{{end}}</span>
+    </summary>
+    {{with .New}}<div class="muted">New</div><ul class="imp-list">{{range .}}<li>{{.Key}}</li>{{end}}</ul>{{end}}
+    {{with .Changed}}<div class="muted">Changed</div><ul class="imp-list">{{range .}}<li>{{.Key}}: {{.Was}} to {{.Now}}</li>{{end}}</ul>{{end}}
+    {{with .Removed}}<div class="muted">Removed</div><ul class="imp-list">{{range .}}<li>{{.Key}}: was {{.Was}}</li>{{end}}</ul>{{end}}
+  </details>
+  {{end}}
+</section>
+
+<section class="card" id="import-kept" aria-labelledby="imp-kh">
+  <h3 id="imp-kh">Kept manual labels</h3>
+  {{if .Kept}}
+  <p class="muted">These sections carry a label you made, so the import leaves them as they are.</p>
+  <ul class="imp-list">{{range .Kept}}<li>{{.Key}}: stays {{.Was}}, the import would say {{.Now}}</li>{{end}}</ul>
+  {{else}}
+  <p class="empty">No section the import would label carries a manual label.</p>
+  {{end}}
+</section>
+
+<section class="card" id="import-skipped" aria-labelledby="imp-sh">
+  <h3 id="imp-sh">Skipped items</h3>
+  {{if .Skipped}}
+  <ul>{{range .Skipped}}<li><b>{{.What}}</b>: {{.Reason}}</li>{{end}}</ul>
+  {{else}}
+  <p class="empty">Nothing was skipped.</p>
+  {{end}}
+</section>
+{{end}}
+{{end}}

@@ -11,18 +11,24 @@ import (
 
 	"run8-ops-center/internal/engine"
 	"run8-ops-center/internal/profile"
+	"run8-ops-center/internal/run8route"
 	"run8-ops-center/internal/trackmap"
 )
 
 // RegisterLearn serves the learn-mode view at /learn and its label actions:
-// POST /trackmap/label, /trackmap/rename and /trackmap/remove.
+// POST /trackmap/label, /trackmap/rename and /trackmap/remove. The import from
+// Run8 adds POST /trackmap/import/preview, which renders the preview page, and
+// POST /trackmap/import/confirm.
 func RegisterLearn(s *Server, b engine.Backend) {
 	vwPages(s, "learn.html")
+	vwPages(s, "import.html")
 	h := &learnHandler{s: s, b: b}
 	s.HandleFunc("GET /learn", h.page)
 	s.HandleFunc("POST /trackmap/label", h.label)
 	s.HandleFunc("POST /trackmap/rename", h.rename)
 	s.HandleFunc("POST /trackmap/remove", h.remove)
+	s.HandleFunc("POST /trackmap/import/preview", h.importPreview)
+	s.HandleFunc("POST /trackmap/import/confirm", h.importConfirm)
 }
 
 type learnHandler struct {
@@ -39,6 +45,7 @@ type learnPage struct {
 	Cars        int
 	Unmapped    int
 	Share       string
+	Import      learnImport
 	Candidates  []learnCandidate
 	Groups      []learnGroup
 	Sections    int // labelled sections in total
@@ -48,25 +55,54 @@ type learnPage struct {
 	Error       string
 }
 
+// learnImport is the "Import from Run8" card.
+type learnImport struct {
+	Configured bool   // the profile names Run8 folders
+	Status     string // engine.Run8Ready, Run8Partial or Run8Unavailable
+	Reason     string // why Status is unavailable
+	Files      []learnFile
+	Last       string // when the last import was made, "" for never
+	Changed    bool   // the Run8 files differ from the last import
+	Available  bool   // readable data and no import yet
+	CanPreview bool
+}
+
+// learnFile is a Run8 route file that could not be used.
+type learnFile struct{ Name, Path, Reason string }
+
+func learnFiles(list []run8route.FileStatus) []learnFile {
+	out := make([]learnFile, len(list))
+	for i, f := range list {
+		out[i] = learnFile{Name: f.Name, Path: f.Path, Reason: dashFileReason(f)}
+	}
+	return out
+}
+
 type learnIndustry struct{ Tag, Name string }
 
 type learnCandidate struct {
-	TrainID    string
-	Title      string
-	Locos      bool // no cars, locomotives only
-	Cars       int
-	Samples    []string
-	Tags       []trackmap.TagCount
-	Sections   []trackmap.SectionRef // every unmapped section
-	Shown      []trackmap.SectionRef
-	More       int
-	Suggestion *learnSuggestion
+	TrainID     string
+	Title       string
+	Locos       bool // no cars, locomotives only
+	Cars        int
+	Samples     []string
+	Tags        []trackmap.TagCount
+	Sections    []trackmap.SectionRef // every unmapped section it occupies
+	Shown       []trackmap.SectionRef
+	More        int
+	Track       []trackmap.SectionRef // every section a label will cover: Sections plus the rest of its track
+	Extra       []trackmap.SectionRef // Track without Sections
+	ExtraShown  []trackmap.SectionRef
+	ExtraMore   int
+	Suggestion  *learnSuggestion
+	prefillForm learnFields
 }
 
 type learnSuggestion struct {
-	Text   string // the suggested label, readable
-	Reason string
-	Label  learnFields
+	Text       string // the suggested label, readable
+	Reason     string
+	Label      learnFields
+	NeedsTrack bool // a yard with no track name: it pre-fills the form and has no one-click accept
 }
 
 // learnFields are the form values that make up a label.
@@ -82,7 +118,13 @@ type learnGroup struct {
 	Kind      string
 	CanRename bool // not the ignored group
 	Key       string
-	Sections  []string // "prefix/section" keys
+	Sections  []learnSection
+}
+
+// learnSection is one labelled section of a group.
+type learnSection struct {
+	Key      string // "prefix/section"
+	Imported bool   // the label came from the Run8 import
 }
 
 // learnEdit is the card at the top of the page for relabelling one section or
@@ -109,6 +151,7 @@ func learnBuild(v *engine.View, q url.Values, errMsg string) learnPage {
 			p.Industries = append(p.Industries, learnIndustry{in.Tag, in.Name})
 		}
 	}
+	p.Import = learnImportOf(v)
 	for _, c := range v.Candidates {
 		lc := learnCandidate{
 			TrainID: c.TrainID, Cars: c.Cars, Samples: c.Samples, Tags: c.Tags,
@@ -127,8 +170,28 @@ func learnBuild(v *engine.View, q url.Values, errMsg string) learnPage {
 			lc.Shown = lc.Shown[:learnSectionsShown]
 			lc.More = len(c.Sections) - learnSectionsShown
 		}
+		lc.Track = c.Track
+		if len(lc.Track) == 0 {
+			lc.Track = c.Sections
+		}
+		for _, s := range lc.Track {
+			if !slices.Contains(c.Sections, s) {
+				lc.Extra = append(lc.Extra, s)
+			}
+		}
+		lc.ExtraShown = lc.Extra
+		if len(lc.ExtraShown) > learnSectionsShown {
+			lc.ExtraShown = lc.ExtraShown[:learnSectionsShown]
+			lc.ExtraMore = len(lc.Extra) - learnSectionsShown
+		}
 		if sg := c.Suggestion; sg != nil {
-			lc.Suggestion = &learnSuggestion{Text: learnLabelText(sg.Label), Reason: sg.Reason, Label: learnFieldsOf(sg.Label)}
+			lc.Suggestion = &learnSuggestion{
+				Text: learnLabelText(sg.Label), Reason: sg.Reason, Label: learnFieldsOf(sg.Label),
+				NeedsTrack: sg.NeedsTrackName,
+			}
+			if sg.NeedsTrackName {
+				lc.prefillForm = learnFieldsOf(sg.Label)
+			}
 		}
 		p.Candidates = append(p.Candidates, lc)
 	}
@@ -141,7 +204,12 @@ func learnBuild(v *engine.View, q url.Values, errMsg string) learnPage {
 			CanRename: g.Location.Kind != trackmap.KindIgnored, Key: g.Location.Key(),
 		}
 		for _, s := range g.Sections {
-			lg.Sections = append(lg.Sections, s.Key())
+			ls := learnSection{Key: s.Key()}
+			if v.TrackMap != nil {
+				l, ok := v.TrackMap.Lookup(s.Prefix, s.Section)
+				ls.Imported = ok && l.Source == trackmap.SourceRun8
+			}
+			lg.Sections = append(lg.Sections, ls)
 		}
 		p.Sections += len(g.Sections)
 		p.Groups = append(p.Groups, lg)
@@ -164,10 +232,14 @@ func learnBuild(v *engine.View, q url.Values, errMsg string) learnPage {
 	return p
 }
 
-// learnLabelText renders a label for display, e.g. "yard Norris / Bowl 14".
+// learnLabelText renders a label for display, e.g. "yard Norris / Bowl 14". A yard
+// label with no track name is a suggestion that only pre-fills the form.
 func learnLabelText(l trackmap.Label) string {
 	switch l.Kind {
 	case trackmap.KindYard:
+		if l.Track == "" {
+			return "yard " + l.Yard + ", with the track name left for you to enter"
+		}
 		return "yard track " + l.Yard + " / " + l.Track
 	case trackmap.KindIndustry:
 		return "industry track " + strings.Join(l.Industries, ", ")
@@ -352,8 +424,9 @@ type learnForm struct {
 // Form pairs label values with the yards to choose from.
 func (p learnPage) Form(f learnFields) learnForm { return learnForm{Fields: f, Yards: p.Yards} }
 
-// Blank is the empty label the "use a different label" form starts from.
-func (learnCandidate) Blank() learnFields { return learnFields{} }
+// Prefill is what the candidate's label form starts from: the suggested yard with
+// the track name blank when the suggestion needs one, otherwise empty.
+func (c learnCandidate) Prefill() learnFields { return c.prefillForm }
 
 func learnBool(b bool) int {
 	if b {

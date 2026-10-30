@@ -38,6 +38,10 @@ func activeTab(urlPath string) string {
 	if urlPath == "/" {
 		return "dashboard"
 	}
+	// The label and import actions render the learn page, or the import preview.
+	if strings.HasPrefix(urlPath, "/trackmap/") {
+		return "learn"
+	}
 	for _, t := range tabs[1:] {
 		if urlPath == t.Href || strings.HasPrefix(urlPath, t.Href+"/") {
 			return t.Key

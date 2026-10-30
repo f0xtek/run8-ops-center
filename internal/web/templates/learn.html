@@ -57,6 +57,36 @@
   {{end}}
 </section>
 
+<section class="card" id="import" aria-labelledby="learn-ih">
+  <h2 id="learn-ih">Import from Run8</h2>
+  {{with .Import}}
+  {{if not .Configured}}
+  <p class="empty">The active profile names no Run8 route folders, so there is nothing to import.</p>
+  {{else}}
+  <p class="muted" style="max-width:70ch">Run8 stores the industry tracks, the hump bowl and the receiving tracks in its route files. The import turns them into labels. It shows a preview first and changes nothing until you confirm it. A label you made yourself is never overwritten.</p>
+  {{if .Changed}}
+  <div class="learn-hint"><div><b>The Run8 track data changed since the last import</b>{{if .Last}} on {{.Last}}{{end}}.</div><div class="muted">Preview the import to see what differs.</div></div>
+  {{else if .Available}}
+  <div class="learn-hint"><div><b>An import is available.</b> The Run8 track data can be read and nothing has been imported yet.</div></div>
+  {{else if .Last}}
+  <p>Last imported {{.Last}}. The Run8 track data is the same as then.</p>
+  {{end}}
+  {{if eq .Status "unavailable"}}
+  <div class="learn-err" role="alert"><b>No Run8 track data could be read.</b> {{.Reason}}. Check the install folder in <a href="/setup#install-dir">Setup</a>.</div>
+  {{end}}
+  {{if .Files}}
+  <div>
+    <b>Files that could not be used</b>
+    <ul>{{range .Files}}<li><span class="mono">{{.Path}}</span>: {{.Reason}}</li>{{end}}</ul>
+  </div>
+  {{end}}
+  <form method="post" action="/trackmap/import/preview">
+    <button type="submit" class="primary"{{if not .CanPreview}} disabled{{end}}>Preview the import</button>
+  </form>
+  {{end}}
+  {{end}}
+</section>
+
 {{with .Edit}}
 <section class="card" id="learn-edit" aria-labelledby="learn-eh">
   <h3 id="learn-eh">{{.Title}}</h3>
@@ -96,10 +126,17 @@
     {{if .Samples}}<div class="muted">{{if .Locos}}Locomotives{{else}}Cars{{end}}: <span class="mono">{{range $i, $s := .Samples}}{{if $i}}, {{end}}{{$s}}{{end}}</span></div>{{end}}
     {{if .Tags}}<div class="learn-tags" aria-label="Destination tags">{{range .Tags}}<span class="learn-tag">{{.Tag}} &times;{{.Count}}</span>{{end}}</div>{{end}}
     <div class="learn-secs" aria-label="Unmapped sections">{{range .Shown}}<span>{{.Key}}</span>{{end}}{{if .More}}<span class="muted">and {{.More}} more</span>{{end}}</div>
+    {{if .Extra}}
+    <div class="muted">Labelling this {{if .Locos}}train{{else}}cut{{end}} also labels the other {{len .Extra}} unmapped section{{if ne (len .Extra) 1}}s{{end}} of the track it stands on, {{len .Track}} in all:</div>
+    <div class="learn-secs" aria-label="Other sections of the track that will be labelled">{{range .ExtraShown}}<span>{{.Key}}</span>{{end}}{{if .ExtraMore}}<span class="muted">and {{.ExtraMore}} more</span>{{end}}</div>
+    {{end}}
     {{if .Suggestion}}
     <div class="learn-hint">
       <div><b>Hint:</b> {{.Suggestion.Text}}</div>
       <div>Why: {{.Suggestion.Reason}}.</div>
+      {{if .Suggestion.NeedsTrack}}
+      <div class="muted">This is a guess, and it has no track name. It is filled into the form below for you to finish.</div>
+      {{else}}
       <div class="muted">This is a guess. It is not applied until you accept it.</div>
       <form method="post" action="/trackmap/label" data-async>
         <input type="hidden" name="train" value="{{.TrainID}}">
@@ -109,17 +146,18 @@
         <input type="hidden" name="industries" value="{{.Suggestion.Label.Industries}}">
         <button type="submit" class="primary">Accept this hint</button>
       </form>
+      {{end}}
     </div>
     {{end}}
-    <details>
-      <summary>{{if .Suggestion}}Use a different label{{else}}Label this {{if .Locos}}train{{else}}cut{{end}}{{end}}</summary>
+    <details{{if and .Suggestion .Suggestion.NeedsTrack}} open{{end}}>
+      <summary>{{if and .Suggestion (not .Suggestion.NeedsTrack)}}Use a different label{{else}}Label this {{if .Locos}}train{{else}}cut{{end}}{{end}}</summary>
       <form class="learn-form" method="post" action="/trackmap/label" data-async>
         <input type="hidden" name="train" value="{{.TrainID}}">
-        {{template "learn_fields" ($d.Form .Blank)}}
-        {{if gt (len .Sections) 1}}
+        {{template "learn_fields" ($d.Form .Prefill)}}
+        {{if gt (len .Track) 1}}
         <label>Apply to
           <select name="section">
-            <option value="">All {{len .Sections}} unmapped sections</option>
+            <option value="">All {{len .Track}} sections{{if .Extra}} of the track{{end}}</option>
             {{range .Sections}}<option value="{{.Key}}">Only section {{.Key}}</option>{{end}}
           </select>
         </label>
@@ -148,11 +186,12 @@
     <ul class="learn-labels">
       {{range .Sections}}
       <li>
-        <span class="mono">{{.}}</span>
-        <a class="btn small" href="/learn?relabel={{.}}#learn-edit">Relabel</a>
+        <span class="mono">{{.Key}}</span>
+        {{if .Imported}}<span class="chip wait" title="Imported from Run8 route data. Relabelling it makes it a manual label.">imported</span>{{end}}
+        <a class="btn small" href="/learn?relabel={{.Key}}#learn-edit">Relabel</a>
         <form method="post" action="/trackmap/remove" data-async>
-          <input type="hidden" name="section" value="{{.}}">
-          <button type="submit" class="small danger" aria-label="Remove the label from section {{.}}">Remove</button>
+          <input type="hidden" name="section" value="{{.Key}}">
+          <button type="submit" class="small danger" aria-label="Remove the label from section {{.Key}}">Remove</button>
         </form>
       </li>
       {{end}}

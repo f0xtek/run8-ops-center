@@ -123,6 +123,7 @@ type dashSim struct {
 	mu       sync.Mutex
 	w        *dashWorld
 	base     *engine.View
+	imp      *vwImporter    // synthetic Run8 install behind the import and the View's Run8 state; nil for none
 	all      []orders.Order // started and finished orders
 	seq      int
 	calls    []string
@@ -148,6 +149,9 @@ func (f *dashSim) View() *engine.View {
 
 func (f *dashSim) viewLocked() *engine.View {
 	v := *f.base
+	if f.imp != nil {
+		v.Run8 = f.imp.state(f.base.TrackMap)
+	}
 	var active []orders.Order
 	for _, o := range f.all {
 		if o.Reserved() {
@@ -268,9 +272,21 @@ func (f *dashSim) SetInstallDir(string) error                    { return errors
 func (f *dashSim) SetServer(int, bool) error                     { return errors.New("unused") }
 func (f *dashSim) SwitchProfile(string) error                    { return errors.New("unused") }
 func (f *dashSim) PreviewImport() (engine.ImportPreview, error) {
-	return engine.ImportPreview{}, errors.New("unused")
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	if f.imp == nil {
+		return engine.ImportPreview{}, errors.New("profile names no Run8 folders")
+	}
+	return f.imp.preview(f.base.TrackMap)
 }
-func (f *dashSim) ConfirmImport(string) error { return errors.New("unused") }
+func (f *dashSim) ConfirmImport(token string) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	if f.imp == nil {
+		return errors.New("profile names no Run8 folders")
+	}
+	return f.imp.confirm(f.base.TrackMap, token)
+}
 
 // dashNewServer registers the dashboard and order pages on a Server over b.
 func dashNewServer(t *testing.T, b engine.Backend) http.Handler {

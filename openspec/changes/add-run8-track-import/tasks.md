@@ -39,9 +39,9 @@
 
 ## 6. Web UI (`internal/web`)
 
-- [ ] 6.1 Add the learn-mode import card, the preview page (counts per category, collapsible location groups, unusable files, confirm and cancel), the confirm and cancel handling, and the "imported" pill in the label list (design D8). A suggestion with no track name pre-fills the label form. Verify with handler tests on the synthetic install for preview, confirm, stale-token refusal and cancel. Then verify in a browser against a temp install tree built from `references/AutoLabel/`: import, check that the dashboard unmapped count drops, and check that imported labels show the pill.
-- [ ] 6.2 Add the dashboard attention items for the track data notice and unusable files, linking to `/learn#import`, and change the setup page's install folder help text. Verify with view tests that each item renders with its link, and check it in a browser.
-- [ ] 6.3 Update the README's first-run section to start with the import and to describe whole-track labelling, the new suggestions and the profile upgrade. Read `skill://unslop` before writing, and run the finished text through it. Verify that the described steps match the UI from 6.1 and that the unslop pass was applied.
+- [x] 6.1 Add the learn-mode import card, the preview page (counts per category, collapsible location groups, unusable files, confirm and cancel), the confirm and cancel handling, and the "imported" pill in the label list (design D8). A suggestion with no track name pre-fills the label form. Verify with handler tests on the synthetic install for preview, confirm, stale-token refusal and cancel. Then verify in a browser against a temp install tree built from `references/AutoLabel/`: import, check that the dashboard unmapped count drops, and check that imported labels show the pill.
+- [x] 6.2 Add the dashboard attention items for the track data notice and unusable files, linking to `/learn#import`, and change the setup page's install folder help text. Verify with view tests that each item renders with its link, and check it in a browser.
+- [x] 6.3 Update the README's first-run section to start with the import and to describe whole-track labelling, the new suggestions and the profile upgrade. Read `skill://unslop` before writing, and run the finished text through it. Verify that the described steps match the UI from 6.1 and that the unslop pass was applied.
 
 ## 7. Integration
 
