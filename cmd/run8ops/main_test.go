@@ -134,7 +134,8 @@ func TestDataDirInsideRunInstallExitsBeforeCreatingAnything(t *testing.T) {
 		if code == 0 {
 			t.Fatalf("--data %s: exit code 0", data)
 		}
-		if !strings.Contains(stderr, install) {
+		// The error quotes paths with %q, which doubles backslashes on Windows.
+		if !strings.Contains(stderr, fmt.Sprintf("%q", install)) {
 			t.Fatalf("--data %s: error does not name the protected directory:\n%s", data, stderr)
 		}
 		if strings.Contains(stdout, "open:") {
@@ -253,4 +254,18 @@ func pageEventuallyContains(t *testing.T, url, want string, within time.Duration
 		time.Sleep(200 * time.Millisecond)
 	}
 	return false
+}
+
+func TestVersionFlagPrintsVersionWithoutTouchingAnything(t *testing.T) {
+	data := filepath.Join(t.TempDir(), "data")
+	code, stdout, stderr := runArgs(t, options{}, "--version", "--data", data)
+	if code != 0 {
+		t.Fatalf("exit code %d, stderr:\n%s", code, stderr)
+	}
+	if stdout != "run8ops dev\n" {
+		t.Fatalf("stdout = %q, want %q", stdout, "run8ops dev\n")
+	}
+	if _, err := os.Stat(data); !os.IsNotExist(err) {
+		t.Fatalf("--version created the data folder (stat error: %v)", err)
+	}
 }

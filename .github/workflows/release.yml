@@ -1,0 +1,79 @@
+name: Release
+
+# Every push to main runs the tests, works out the next version from the
+# Conventional Commits since the last tag, and publishes a Windows build.
+on:
+  push:
+    branches: [main]
+
+# A second push waits for the first release to finish, so it computes its
+# version from the tag the first one created.
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  tests:
+    name: Tests
+    uses: ./.github/workflows/tests.yml
+
+  release:
+    name: release
+    needs: tests
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Work out the version
+        id: version
+        run: |
+          version=$(bash .github/scripts/next-version.sh)
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          if [ -z "$version" ]; then
+            echo "No releasable commits since the last tag, so nothing is released." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Set up Go
+        if: steps.version.outputs.version != ''
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Build
+        if: steps.version.outputs.version != ''
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          mkdir dist
+          CGO_ENABLED=0 GOOS=windows GOARCH=amd64 \
+            go build -trimpath -ldflags "-s -w -X main.version=${VERSION}" \
+            -o dist/run8ops.exe ./cmd/run8ops
+
+      - name: Package
+        if: steps.version.outputs.version != ''
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          zip="run8ops_v${VERSION}_windows_amd64.zip"
+          zip -j "dist/$zip" dist/run8ops.exe README.md
+          (cd dist && sha256sum "$zip" > "$zip.sha256")
+          bash .github/scripts/next-version.sh --notes "$VERSION" > notes.md
+
+      - name: Publish the release
+        if: steps.version.outputs.version != ''
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "v${VERSION}" \
+            --target "$GITHUB_SHA" \
+            --title "v${VERSION}" \
+            --notes-file notes.md \
+            dist/*.zip dist/*.sha256

@@ -2,3 +2,4 @@ references/
 examples/
 notes.txt
 .DS_Store
+dist/
