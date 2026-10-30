@@ -1,1 +1,2 @@
 testdata/** -text
+internal/profile/bundled/** -text
