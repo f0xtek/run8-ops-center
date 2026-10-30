@@ -1,0 +1,164 @@
+{{define "learn_fields"}}
+<div class="learn-fields">
+  <label>Kind
+    <select name="kind">
+      <option value="yard"{{if eq .Fields.Kind "yard"}} selected{{end}}>Yard track</option>
+      <option value="industry"{{if eq .Fields.Kind "industry"}} selected{{end}}>Industry track</option>
+      <option value="ignored"{{if eq .Fields.Kind "ignored"}} selected{{end}}>Ignored (mainline)</option>
+    </select>
+  </label>
+  <label>Yard
+    <select name="yard">
+      <option value="">Choose a yard</option>
+      {{range .Yards}}<option value="{{.Code}}"{{if eq .Code $.Fields.Yard}} selected{{end}}>{{.Name}} ({{.Code}})</option>{{end}}
+    </select>
+  </label>
+  <label>Track name
+    <input type="text" name="track" value="{{.Fields.Track}}" placeholder="Bowl 14" autocomplete="off">
+  </label>
+  <label>Industry tags
+    <input type="text" name="industries" value="{{.Fields.Industries}}" list="learn-industry-tags" placeholder="GES" autocomplete="off">
+  </label>
+</div>
+<p class="muted">Yard track uses the yard and track name. Industry track uses the industry tags; separate several with commas. Ignored needs nothing else.</p>
+{{end}}
+{{define "main"}}
+<style>
+.learn-fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px}
+.learn-cand{display:grid;gap:10px;padding:12px 0;border-top:1.5px solid var(--ink)}
+.learn-tags{display:flex;gap:6px;flex-wrap:wrap}
+.learn-tag{font-family:var(--mono);font-size:12px;border:1px solid var(--rule);border-radius:4px;padding:1px 6px;background:var(--soft)}
+.learn-hint{border-left:4px solid var(--warn);background:var(--soft);padding:8px 12px;display:grid;gap:6px}
+.learn-secs{display:flex;gap:4px 10px;flex-wrap:wrap;font-family:var(--mono);font-size:12px}
+.learn-labels{list-style:none;margin:0;padding:0;display:grid;gap:6px;grid-template-columns:repeat(auto-fill,minmax(260px,1fr))}
+.learn-labels li{display:flex;gap:8px;align-items:center;flex-wrap:wrap;border:1px solid var(--rule);border-radius:4px;padding:4px 8px}
+.learn-labels form{display:inline}
+.learn-err{border-left:4px solid var(--bad);background:var(--soft);padding:10px 14px}
+.learn-form{display:grid;gap:8px}
+.learn-group{display:grid;gap:8px;padding-top:8px;border-top:1px dashed var(--rule)}
+</style>
+{{$d := .Data}}
+{{with .Data}}
+{{with .Error}}<div class="learn-err" role="alert"><b>Not done.</b> {{.}}</div>{{end}}
+<datalist id="learn-industry-tags">{{range .Industries}}<option value="{{.Tag}}" label="{{.Name}}">{{end}}</datalist>
+
+<section class="card" aria-labelledby="learn-h">
+  <h2 id="learn-h">Learn mode</h2>
+  {{if not .HasSnapshot}}
+  <p class="empty">No save has been ingested yet. Unmapped cuts are listed once the active world save is read.</p>
+  {{else}}
+  <div class="row between">
+    <div class="tile {{if gt .Unmapped 0}}attn{{end}}" style="min-width:220px">
+      <b>{{.Unmapped}} unmapped cars</b>
+      <span>{{.Share}} of {{.Cars}} cars</span>
+    </div>
+    <p class="muted" style="max-width:60ch">Cars on unmapped track are left out of orders. Label the track they sit on and they move into the car lists and orders at once. Nothing here is labelled until you press a button.</p>
+  </div>
+  {{end}}
+</section>
+
+{{with .Edit}}
+<section class="card" id="learn-edit" aria-labelledby="learn-eh">
+  <h3 id="learn-eh">{{.Title}}</h3>
+  {{if .Rename}}
+  <form class="learn-form" method="post" action="/trackmap/rename">
+    <input type="hidden" name="old_kind" value="{{.Old.Kind}}">
+    <input type="hidden" name="old_yard" value="{{.Old.Yard}}">
+    <input type="hidden" name="old_track" value="{{.Old.Track}}">
+    <input type="hidden" name="old_industries" value="{{.Old.Industries}}">
+    {{template "learn_fields" ($d.Form .Fields)}}
+    <div class="row"><button type="submit" class="primary">Rename</button> <a class="btn" href="/learn">Cancel</a></div>
+  </form>
+  {{else}}
+  <form class="learn-form" method="post" action="/trackmap/label">
+    <input type="hidden" name="section" value="{{.Section}}">
+    {{template "learn_fields" ($d.Form .Fields)}}
+    <div class="row"><button type="submit" class="primary">Relabel</button> <a class="btn" href="/learn">Cancel</a></div>
+  </form>
+  {{end}}
+</section>
+{{end}}
+
+{{if .HasSnapshot}}
+<section class="card" id="candidates" aria-labelledby="learn-ch">
+  <h2 id="learn-ch">Unmapped cuts and trains</h2>
+  {{if not .HasProfile}}
+  <p class="empty">No route profile is loaded, so labels cannot be checked.</p>
+  {{else if not .Candidates}}
+  <p class="empty">Every section in the snapshot has a label.</p>
+  {{end}}
+  {{range .Candidates}}
+  <div class="learn-cand" id="train-{{.TrainID}}">
+    <div class="row between">
+      <h3>{{.Title}} <span class="mono muted">{{.TrainID}}</span></h3>
+      <span class="mono">{{if .Locos}}locomotives only{{else}}{{.Cars}} car{{if ne .Cars 1}}s{{end}}{{end}}, {{len .Sections}} section{{if ne (len .Sections) 1}}s{{end}}</span>
+    </div>
+    {{if .Samples}}<div class="muted">{{if .Locos}}Locomotives{{else}}Cars{{end}}: <span class="mono">{{range $i, $s := .Samples}}{{if $i}}, {{end}}{{$s}}{{end}}</span></div>{{end}}
+    {{if .Tags}}<div class="learn-tags" aria-label="Destination tags">{{range .Tags}}<span class="learn-tag">{{.Tag}} &times;{{.Count}}</span>{{end}}</div>{{end}}
+    <div class="learn-secs" aria-label="Unmapped sections">{{range .Shown}}<span>{{.Key}}</span>{{end}}{{if .More}}<span class="muted">and {{.More}} more</span>{{end}}</div>
+    {{if .Suggestion}}
+    <div class="learn-hint">
+      <div><b>Hint:</b> {{.Suggestion.Text}}</div>
+      <div>Why: {{.Suggestion.Reason}}.</div>
+      <div class="muted">This is a guess. It is not applied until you accept it.</div>
+      <form method="post" action="/trackmap/label" data-async>
+        <input type="hidden" name="train" value="{{.TrainID}}">
+        <input type="hidden" name="kind" value="{{.Suggestion.Label.Kind}}">
+        <input type="hidden" name="yard" value="{{.Suggestion.Label.Yard}}">
+        <input type="hidden" name="track" value="{{.Suggestion.Label.Track}}">
+        <input type="hidden" name="industries" value="{{.Suggestion.Label.Industries}}">
+        <button type="submit" class="primary">Accept this hint</button>
+      </form>
+    </div>
+    {{end}}
+    <details>
+      <summary>{{if .Suggestion}}Use a different label{{else}}Label this {{if .Locos}}train{{else}}cut{{end}}{{end}}</summary>
+      <form class="learn-form" method="post" action="/trackmap/label" data-async>
+        <input type="hidden" name="train" value="{{.TrainID}}">
+        {{template "learn_fields" ($d.Form .Blank)}}
+        {{if gt (len .Sections) 1}}
+        <label>Apply to
+          <select name="section">
+            <option value="">All {{len .Sections}} unmapped sections</option>
+            {{range .Sections}}<option value="{{.Key}}">Only section {{.Key}}</option>{{end}}
+          </select>
+        </label>
+        {{end}}
+        <div><button type="submit" class="primary">Apply label</button></div>
+      </form>
+    </details>
+  </div>
+  {{end}}
+</section>
+{{end}}
+
+<section class="card" id="labels" aria-labelledby="learn-lh">
+  <h2 id="learn-lh">Labelled sections</h2>
+  {{if not .Groups}}
+  <p class="empty">No section has a label yet.</p>
+  {{else}}
+  <p class="muted">{{.Sections}} section{{if ne .Sections 1}}s{{end}} in {{len .Groups}} location{{if ne (len .Groups) 1}}s{{end}}.</p>
+  {{end}}
+  {{range .Groups}}
+  <div class="learn-group">
+    <div class="row between">
+      <h3>{{.Name}} <span class="chip wait">{{.Kind}}</span> <span class="muted">{{len .Sections}} section{{if ne (len .Sections) 1}}s{{end}}</span></h3>
+      {{if .CanRename}}<a class="btn small" href="/learn?rename={{.Key}}#learn-edit">Rename</a>{{end}}
+    </div>
+    <ul class="learn-labels">
+      {{range .Sections}}
+      <li>
+        <span class="mono">{{.}}</span>
+        <a class="btn small" href="/learn?relabel={{.}}#learn-edit">Relabel</a>
+        <form method="post" action="/trackmap/remove" data-async>
+          <input type="hidden" name="section" value="{{.}}">
+          <button type="submit" class="small danger" aria-label="Remove the label from section {{.}}">Remove</button>
+        </form>
+      </li>
+      {{end}}
+    </ul>
+  </div>
+  {{end}}
+</section>
+{{end}}
+{{end}}

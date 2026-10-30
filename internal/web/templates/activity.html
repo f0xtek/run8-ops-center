@@ -1,0 +1,31 @@
+{{define "main"}}
+<style>
+.activity-kind{white-space:nowrap}
+.activity-t{white-space:nowrap}
+</style>
+{{with .Data}}
+<section class="card" aria-labelledby="activity-h">
+  <h2 id="activity-h">Activity</h2>
+  {{if not .Entries}}
+  <p class="empty">Nothing has happened yet. Snapshot changes and order changes are listed here, newest first.</p>
+  {{else}}
+  <p class="muted">Newest first.{{if gt .Total (len .Entries)}} Showing the latest {{len .Entries}} of {{.Total}}.{{end}}</p>
+  <div class="scroll">
+  <table class="activity-log">
+    <thead><tr><th>Time</th><th>Game date</th><th>Kind</th><th>What happened</th></tr></thead>
+    <tbody>
+    {{range .Entries}}
+    <tr>
+      <td class="mono activity-t"><time datetime="{{.ISO}}">{{.Time}}</time></td>
+      <td class="mono activity-t">{{with .Game}}{{.}}{{else}}<span class="muted">none</span>{{end}}</td>
+      <td class="activity-kind"><span class="chip wait">{{.Kind}}</span></td>
+      <td>{{.Message}}</td>
+    </tr>
+    {{end}}
+    </tbody>
+  </table>
+  </div>
+  {{end}}
+</section>
+{{end}}
+{{end}}

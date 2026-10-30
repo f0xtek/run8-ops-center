@@ -1,0 +1,98 @@
+{{define "yards_cars"}}<div class="scroll"><table class="sl yards-cars">
+  <thead><tr><th>Car</th><th>Type</th><th>L/E</th><th>Destination</th><th>Status</th></tr></thead>
+  <tbody>
+  {{range .}}<tr>
+    <td>{{.Number}}</td>
+    <td>{{.Type}}</td>
+    <td><span class="pill {{if .Loaded}}L{{else}}E{{end}}">{{if .Loaded}}L{{else}}E{{end}}</span></td>
+    <td>{{with .Dest}}{{.}}{{else}}<span class="muted">none</span>{{end}}</td>
+    <td><span class="chip {{.State}}">{{.Service}}</span></td>
+  </tr>
+  {{end}}
+  </tbody>
+</table></div>{{end}}
+{{define "main"}}
+<style>
+.yards-sub{display:grid;gap:10px;scroll-margin-top:110px}
+.yards-ind{scroll-margin-top:110px}
+.yards-track,.yards-ind{display:grid;gap:6px;padding:8px 0;border-top:1px dashed var(--rule)}
+.yards-head{display:flex;gap:10px;align-items:baseline;flex-wrap:wrap}
+.yards-occ{display:grid;grid-template-columns:minmax(150px,max-content) minmax(90px,max-content) max-content;gap:4px 12px;align-items:center;font-size:13px}
+.yards-occ .bar{min-width:90px}
+.yards-over{color:var(--bad);font-weight:600}
+.yards-services{display:flex;gap:6px;flex-wrap:wrap}
+</style>
+{{with .Data}}
+<section class="card" aria-labelledby="yards-h">
+  <h2 id="yards-h">Yards &amp; industries</h2>
+  {{if not .HasProfile}}
+  <p class="empty">No route profile is loaded.</p>
+  {{else if not .HasSnapshot}}
+  <p class="empty">No save has been ingested yet. Tracks and industries are listed once the active world save is read.</p>
+  {{else if gt .Unmapped 0}}
+  <p class="muted">{{.Unmapped}} car{{if ne .Unmapped 1}}s are{{else}} is{{end}} on unmapped track and not shown here. <a href="/learn">Label them in learn mode.</a></p>
+  {{end}}
+  {{if .HasProfile}}
+  <div class="row jobnav" role="group" aria-label="Jump to a section">
+    {{range .Yards}}<a class="btn small" href="#yard-{{.Code}}">{{.Code}}</a>{{end}}
+    {{range .Groups}}<a class="btn small" href="#job-{{.ID}}">{{if .Symbol}}{{.Symbol}}{{else}}Other{{end}}</a>{{end}}
+  </div>
+  {{end}}
+</section>
+
+{{if .HasProfile}}
+<section class="card" aria-labelledby="yards-yh">
+  <h2 id="yards-yh">Yards</h2>
+  {{range .Yards}}
+  <div class="yards-sub" id="yard-{{.Code}}">
+    <div class="yards-head">
+      <h3>{{if .Name}}{{.Name}}{{else}}{{.Code}}{{end}}</h3>
+      <span class="mono muted">{{.Code}}</span>
+      <span class="muted">{{.Cars}} car{{if ne .Cars 1}}s{{end}}, {{len .Tracks}} labelled track{{if ne (len .Tracks) 1}}s{{end}}</span>
+      {{if .NotInProf}}<span class="chip off">not in profile</span>{{end}}
+    </div>
+    {{range .Tracks}}
+    <div class="yards-track">
+      <div class="yards-head"><strong>{{.Name}}</strong> <span class="muted">{{len .Cars}} car{{if ne (len .Cars) 1}}s{{end}}</span></div>
+      {{if .Cars}}{{template "yards_cars" .Cars}}{{else}}<p class="empty">Empty.</p>{{end}}
+    </div>
+    {{else}}
+    <p class="empty">No track in {{.Code}} is labelled yet. <a href="/learn">Label tracks in learn mode.</a></p>
+    {{end}}
+  </div>
+  {{end}}
+</section>
+
+{{range .Groups}}
+<section class="card" id="job-{{.ID}}" aria-labelledby="yards-jh-{{.ID}}">
+  <div class="yards-head">
+    <h2 id="yards-jh-{{.ID}}">{{.Title}}</h2>
+    {{with .Home}}<span class="muted">home yard {{.}}</span>{{end}}
+  </div>
+  {{range .Industries}}
+  <div class="yards-ind" id="ind-{{.Tag}}">
+    <div class="yards-head">
+      <h3>{{.Name}}</h3><span class="mono muted">{{.Tag}}</span>
+      <span class="muted">{{len .Cars}} car{{if ne (len .Cars) 1}}s{{end}}</span>
+    </div>
+    {{if .Occupancy}}
+    <div class="yards-occ" role="group" aria-label="Occupancy of {{.Name}} by car type">
+      {{range .Occupancy}}
+      <span>{{.Type}}</span>
+      {{if .HasCapacity}}<span class="bar" aria-hidden="true"><i{{if .Over}} class="full"{{end}} style="width:{{.Pct}}%"></i></span>
+      <span class="mono{{if .Over}} yards-over{{end}}">{{.Count}}/{{.Capacity}}</span>
+      {{else}}<span class="muted">not handled here</span><span class="mono">{{.Count}}</span>{{end}}
+      {{end}}
+    </div>
+    {{end}}
+    {{if .Services}}
+    <div class="yards-services">{{range .Services}}<span class="muted">{{.Label}} <b class="mono">{{.Count}}</b></span>{{end}}</div>
+    {{end}}
+    {{if .Cars}}{{template "yards_cars" .Cars}}{{else}}<p class="empty">No cars here.</p>{{end}}
+  </div>
+  {{end}}
+</section>
+{{end}}
+{{end}}
+{{end}}
+{{end}}

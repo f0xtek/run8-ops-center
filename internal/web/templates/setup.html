@@ -1,0 +1,133 @@
+{{define "main"}}
+<style>
+.setup-dl{display:grid;grid-template-columns:max-content 1fr;gap:6px 16px;margin:0}
+.setup-dl dt{color:var(--muted);font-size:13px}
+.setup-dl dd{margin:0;overflow-wrap:anywhere}
+.setup-form{display:grid;gap:10px;max-width:640px}
+.setup-notice{border-left:4px solid var(--ok);background:var(--soft);padding:10px 14px}
+.setup-err{border-left:4px solid var(--bad);background:var(--soft);padding:10px 14px}
+.setup-restart{border-left:4px solid var(--warn);background:var(--soft);padding:8px 12px}
+.setup-check{display:flex;flex-direction:row;align-items:center;gap:8px;color:var(--ink);font-size:14px}
+.setup-th input[type=number]{width:90px}
+.setup-th td{white-space:nowrap}
+.setup-report{display:grid;gap:12px}
+.setup-report ul{margin:6px 0 0;padding-left:20px;display:grid;gap:4px}
+</style>
+{{with .Data}}
+{{with .Error}}<div class="setup-err" role="alert"><b>Not saved.</b> {{.}}</div>{{end}}
+{{with .Notice}}<div class="setup-notice" role="status">{{.}}</div>{{end}}
+
+<section class="card" id="source" aria-labelledby="setup-sh">
+  <h2 id="setup-sh">Save source</h2>
+  <dl class="setup-dl">
+    <dt>World save</dt><dd class="mono" id="setup-save-name">{{with .Source.SaveName}}{{.}}{{else}}not set{{end}}</dd>
+    <dt>Save folder</dt><dd class="mono">{{.Source.SaveDir}}</dd>
+    <dt>Auto-save folder</dt><dd class="mono">{{.Source.AutoSaveDir}}</dd>
+    {{with .Source.ActiveFile}}<dt>Reading from</dt><dd class="mono">{{.}}</dd>{{end}}
+  </dl>
+  <p class="muted">These are set on the command line with <span class="mono">--save</span>, <span class="mono">--save-dir</span> and <span class="mono">--autosave-dir</span>. To change them, restart the app with different flags.</p>
+</section>
+
+<section class="card" id="install-dir" aria-labelledby="setup-ih">
+  <h2 id="setup-ih">Run8 install folder</h2>
+  <form class="setup-form" method="post" action="/settings/install-dir">
+    <label>Folder (optional)
+      <input type="text" name="dir" value="{{.InstallDir}}" placeholder="C:\Run8Studios\Run8 Train Simulator V3" autocomplete="off" spellcheck="false">
+    </label>
+    <p class="muted">Used only to read car files. The app never writes to this folder. Leave it empty to clear it.</p>
+    <div><button type="submit" class="primary">Save folder</button></div>
+  </form>
+</section>
+
+<section class="card" id="profile" aria-labelledby="setup-ph">
+  <h2 id="setup-ph">Route profile</h2>
+  {{if .Profiles}}
+  <form class="setup-form" method="post" action="/settings/profile">
+    <label>Active profile
+      <select name="id">
+        {{range .Profiles}}<option value="{{.ID}}"{{if .Selected}} selected{{end}}>{{.Name}} ({{.ID}})</option>{{end}}
+      </select>
+    </label>
+    {{with .ProfileDir}}<p class="muted">Profile folder: <span class="mono">{{.}}</span></p>{{end}}
+    <div><button type="submit" class="primary">Use this profile</button></div>
+  </form>
+  {{else}}
+  <p class="empty">No profiles are installed.</p>
+  {{end}}
+</section>
+
+<section class="card" id="threshold" aria-labelledby="setup-th-h">
+  <h2 id="setup-th-h">Road train limits</h2>
+  <p class="muted">A road train order becomes available when the train reaches its minimum length, as a percent of its maximum length. Cars older than the maximum age (in days) are left off. Clear a field to go back to the profile's value.</p>
+  {{if .Trains}}
+  <div class="scroll">
+  <table class="setup-th">
+    <thead><tr><th>Train</th><th>Route</th><th>Max length</th><th>Min length %</th><th>Max car age (days)</th><th><span class="visually-hidden">Actions</span></th></tr></thead>
+    <tbody>
+    {{range .Trains}}
+    <tr>
+      <td class="mono"><b>{{.Symbol}}</b></td>
+      <td>{{.Route}}</td>
+      <td class="mono">{{.MaxLength}}</td>
+      <td>
+        <input form="th-{{.Symbol}}" type="number" name="min_length_pct" value="{{.MinPct}}" min="0" max="100" step="any" aria-label="{{.Symbol}} minimum length percent">
+        {{if .PctOverride}}<span class="chip off">changed</span>{{end}}
+      </td>
+      <td>
+        <input form="th-{{.Symbol}}" type="number" name="max_car_age_days" value="{{.MaxAge}}" min="0" step="any" placeholder="none" aria-label="{{.Symbol}} maximum car age in days">
+        {{if .AgeOverride}}<span class="chip off">changed</span>{{end}}
+      </td>
+      <td>
+        <form id="th-{{.Symbol}}" method="post" action="/settings/threshold" data-async>
+          <input type="hidden" name="symbol" value="{{.Symbol}}">
+          <button type="submit" class="small primary">Save</button>
+          <button type="submit" class="small" name="reset" value="1" title="Use the profile's values for {{.Symbol}}"{{if not (or .PctOverride .AgeOverride)}} disabled{{end}}>Reset</button>
+        </form>
+      </td>
+    </tr>
+    {{end}}
+    </tbody>
+  </table>
+  </div>
+  {{else}}
+  <p class="empty">The profile has no road trains.</p>
+  {{end}}
+</section>
+
+<section class="card" id="server" aria-labelledby="setup-vh">
+  <h2 id="setup-vh">Server</h2>
+  <form class="setup-form" method="post" action="/settings/server">
+    <label>Port
+      <input type="number" name="port" value="{{.Port}}" min="1" max="65535" required>
+    </label>
+    <label class="setup-check">
+      <input type="checkbox" name="all_interfaces" value="1"{{if .AllIfaces}} checked{{end}}>
+      Listen on all network interfaces, so other devices can open the app
+    </label>
+    <p class="setup-restart"><b>Restart needed.</b> A new port or bind option takes effect the next time the app starts. Without the option the app listens on this PC only (127.0.0.1).</p>
+    <div><button type="submit" class="primary">Save server settings</button></div>
+  </form>
+</section>
+
+<section class="card" id="profile-report" aria-labelledby="setup-rh">
+  <h2 id="setup-rh">Profile report{{with .ProfileName}}: {{.}}{{end}}</h2>
+  {{if not .HasProfile}}
+  <p class="empty">No route profile is loaded.</p>
+  {{else if not .Report}}
+  <p class="empty">No problems found in the profile.</p>
+  {{else}}
+  <p class="muted">{{.Problems}} problem{{if ne .Problems 1}}s{{end}}. The valid parts of the profile still load.</p>
+  <div class="setup-report">
+    {{range .Report}}
+    <div>
+      <h3>{{.Title}} <span class="muted">{{len .Items}}</span></h3>
+      <ul>
+        {{range .Items}}<li>{{.Message}}</li>{{end}}
+      </ul>
+    </div>
+    {{end}}
+  </div>
+  {{end}}
+</section>
+{{end}}
+{{end}}
