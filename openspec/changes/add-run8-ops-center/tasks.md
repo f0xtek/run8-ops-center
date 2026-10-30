@@ -68,7 +68,7 @@
 
 ## 9. Save watching (`internal/watch`)
 
-- [ ] 9.1 Implement the watcher: fsnotify plus a 5 s poll fallback and a 1 s settle check. It follows the named save file and the auto-save folder, filtered to `Auto Save World YYYY.mm.dd HH.MM.SS.xml`, and accepts only candidates newer than the last ingest. Verify with temp-dir tests:
+- [x] 9.1 Implement the watcher: fsnotify plus a 5 s poll fallback and a 1 s settle check. It follows the named save file and the auto-save folder, filtered to `Auto Save World YYYY.mm.dd HH.MM.SS.xml`, and accepts only candidates newer than the last ingest. Verify with temp-dir tests:
   - a rewrite of the named save is ingested;
   - a different world save and a Train save in the save folder are ignored;
   - a non-matching file in the auto-save folder is ignored;
