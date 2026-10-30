@@ -35,10 +35,10 @@
 
 ## 5. Car status (`internal/carstatus`)
 
-- [ ] 5.1 Implement car identity (key, reporting mark derivation), type from patterns, load state, gross weight and length from defaults. Verify with table tests over model names seen in the fixture (`…_ARMN`, `…_TTJX01`, `Run8_Tank107GATX02`).
-- [ ] 5.2 Implement destination classification: industry-bound, train-bound (including aliases and off-map industries), foreign, unassigned and unknown. Verify with a table test covering `AB45 HTI`, `AB10  BRR`, `CHA`, `NOL1`, `A28 A28`, `A28 PHS`, `CPKC .`, `NOR Hump`, `None` and `XYZ123`.
-- [ ] 5.3 Implement location resolution (leading truck, then trailing truck) and the service states (awaiting delivery, working, ready to pull, awaiting train, en route, other). Verify with synthetic-snapshot tests, one per state.
-- [ ] 5.4 Implement dwell tracking (first-seen game date per car location, reset on move) and the snapshot diff for the activity log (appeared, disappeared, moved, retagged), comparing normalised tags. Verify with a two-snapshot test in which a car is retagged `AB45 HTI` → `NOL1` and another car moves. Also verify that diffing the auto-save fixture against the `WorldSave.xml` fixture reports 300 moved vehicles, all in trains 999962, 999967, 999965 and 999949, with 0 appeared, 0 disappeared and 0 retagged (the `AB10 BRR` / `AB10  BRR` spacing is not a retag).
+- [x] 5.1 Implement car identity (key, reporting mark derivation), type from patterns, load state, gross weight and length from defaults. Verify with table tests over model names seen in the fixture (`…_ARMN`, `…_TTJX01`, `Run8_Tank107GATX02`).
+- [x] 5.2 Implement destination classification: industry-bound, train-bound (including aliases and off-map industries), foreign, unassigned and unknown. Verify with a table test covering `AB45 HTI`, `AB10  BRR`, `CHA`, `NOL1`, `A28 A28`, `A28 PHS`, `CPKC .`, `NOR Hump`, `None` and `XYZ123`.
+- [x] 5.3 Implement location resolution (leading truck, then trailing truck) and the service states (awaiting delivery, working, ready to pull, awaiting train, en route, other). Verify with synthetic-snapshot tests, one per state.
+- [x] 5.4 Implement dwell tracking (first-seen game date per car location, reset on move) and the snapshot diff for the activity log (appeared, disappeared, moved, retagged), comparing normalised tags. Verify with a two-snapshot test in which a car is retagged `AB45 HTI` → `NOL1` and another car moves. Also verify that diffing the auto-save fixture against the `WorldSave.xml` fixture reports 300 moved vehicles, all in trains 999962, 999967, 999965 and 999949, with 0 appeared, 0 disappeared and 0 retagged (the `AB10 BRR` / `AB10  BRR` spacing is not a retag).
 
 ## 6. Order generation (`internal/orders`)
 
