@@ -1,0 +1,10 @@
+<?xml version="1.0"?>
+<ScnInfo xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <SaveType>Train</SaveType>
+  <Filename>C:\Run8Studios\Run8 Train Simulator V3\Content\V3Routes\Regions\GulfCoast\Trains\29K.xml</Filename>
+  <DisplayFilename>29K</DisplayFilename>
+  <Description>Intermodal from Inman Yard, Atlanta to CPKC in Meridian, MS. Works McCalla. Generally has KCS power and is 120 - 135 cars. Includes some Piggyback.
+
+It spawns in 2 x 0 configuration because it typically does not arrive in Meridian with more than two locomotives. Size on this one is limited to avoid stringlining. You can pick up additional cars at McCalla to get a longer train.</Description>
+  <FileTimestamp>2024-12-17T01:21:48+00:00</FileTimestamp>
+</ScnInfo>

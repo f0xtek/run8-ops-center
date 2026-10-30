@@ -1,0 +1,25 @@
+<?xml version="1.0"?>
+<ScnLoader xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <trainList />
+  <flagList />
+  <cameraXYZ>
+    <X>224.060272</X>
+    <Y>63.3504639</Y>
+    <Z>-535.8198</Z>
+  </cameraXYZ>
+  <camRotationXYZ>
+    <X>0.1151326</X>
+    <Y>2.80398846</Y>
+    <Z>0</Z>
+  </camRotationXYZ>
+  <camTileXZ>
+    <x>-82</x>
+    <z>-34</z>
+  </camTileXZ>
+  <date>2024-04-02T13:51:31.7933238Z</date>
+  <saveGameType>ExtraBoard</saveGameType>
+  <signals />
+  <switches />
+  <description>In addition to supporting interchange with a short line and one CSX operation, this yard serves as a turn-around point for two local trains: A39 from McCalla, and AB45 from Norris Yard.</description>
+  <trackBulletins />
+</ScnLoader>
