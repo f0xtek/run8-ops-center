@@ -254,3 +254,17 @@ func pageEventuallyContains(t *testing.T, url, want string, within time.Duration
 	}
 	return false
 }
+
+func TestVersionFlagPrintsVersionWithoutTouchingAnything(t *testing.T) {
+	data := filepath.Join(t.TempDir(), "data")
+	code, stdout, stderr := runArgs(t, options{}, "--version", "--data", data)
+	if code != 0 {
+		t.Fatalf("exit code %d, stderr:\n%s", code, stderr)
+	}
+	if stdout != "run8ops dev\n" {
+		t.Fatalf("stdout = %q, want %q", stdout, "run8ops dev\n")
+	}
+	if _, err := os.Stat(data); !os.IsNotExist(err) {
+		t.Fatalf("--version created the data folder (stat error: %v)", err)
+	}
+}

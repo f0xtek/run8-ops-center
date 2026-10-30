@@ -36,6 +36,10 @@ type options struct {
 	ListenReady func(url string)
 }
 
+// version is the release version. The release build stamps it with
+// -ldflags "-X main.version=<version>". A plain go build reports "dev".
+var version = "dev"
+
 const usage = `Usage: run8ops --save <name> [flags]
 
   --save <name>         world save to follow (required); the file name in the save folder, with or without .xml
@@ -44,6 +48,7 @@ const usage = `Usage: run8ops --save <name> [flags]
   --data <dir>          folder for profiles, track map, settings and order state (default: %APPDATA%\Run8OpsCenter)
   --port <n>            web server port for this run (default: the saved setting, 8080)
   --no-browser          do not open the browser on start
+  --version             print the version and exit
 `
 
 // run is main without the process-level pieces. It returns the exit code.
@@ -57,10 +62,15 @@ func run(ctx context.Context, args []string, stdout, stderr io.Writer, opt optio
 		dataFlag    = fs.String("data", "", "")
 		port        = fs.Int("port", 0, "")
 		noBrowser   = fs.Bool("no-browser", false, "")
+		showVersion = fs.Bool("version", false, "")
 	)
 	if err := fs.Parse(args); err != nil {
 		fmt.Fprintf(stderr, "run8ops: %v\n\n%s", err, usage)
 		return 2
+	}
+	if *showVersion {
+		fmt.Fprintf(stdout, "run8ops %s\n", version)
+		return 0
 	}
 	if fs.NArg() > 0 {
 		fmt.Fprintf(stderr, "run8ops: unexpected argument %q\n\n%s", fs.Arg(0), usage)
