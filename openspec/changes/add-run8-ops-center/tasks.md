@@ -50,14 +50,14 @@
 
 ## 7. Order lifecycle (`internal/orders`)
 
-- [ ] 7.1 Implement the state transition table: start a whole order or a single line, confirm, continue with fingerprint suppression, manual complete, and cancel. Invalid transitions must be rejected. Verify with transition tests for every state/action pair.
-- [ ] 7.2 Implement completion detection:
+- [x] 7.1 Implement the state transition table: start a whole order or a single line, confirm, continue with fingerprint suppression, manual complete, and cancel. Invalid transitions must be rejected. Verify with transition tests for every state/action pair.
+- [x] 7.2 Implement completion detection:
   - local jobs: industry set-outs at their industry, yard-line set-outs delivered to the satellite yard (in the yard or at an industry served from it), pick-ups in the home yard, per-car and per-line progress;
   - road trains: stop set-outs delivered to their stop, all other cars absent;
   - the missing-car flag, covering local cars and road set-outs carried off-map.
 
   Verify with a test per lifecycle scenario, including continue followed by an identical snapshot not re-detecting.
-- [ ] 7.3 Implement history records with real and in-game start and finish times. Verify with a test that confirmed and cancelled orders appear in history with their timestamps.
+- [x] 7.3 Implement history records with real and in-game start and finish times. Verify with a test that confirmed and cancelled orders appear in history with their timestamps.
 
 ## 8. Persistence and engine (`internal/store`, `internal/engine`)
 
