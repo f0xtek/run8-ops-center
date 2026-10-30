@@ -75,6 +75,13 @@ func (f *fakeBackend) fire() {
 	}
 }
 
+// testHomePage is a test-only page registered at "/" so the layout can be exercised
+// without any real view.
+const testHomePage = `{{define "main"}}
+<section class="card"><h2>Dashboard</h2><p>Following {{.Chrome.SaveName}}</p></section>
+<section id="attention" class="card"><p>{{.Chrome.WarningCount}} warnings</p></section>
+{{end}}`
+
 func newTestServer(t *testing.T, cfg Config) (*Server, *fakeBackend) {
 	t.Helper()
 	fb := newFakeBackend()
@@ -82,6 +89,12 @@ func newTestServer(t *testing.T, cfg Config) (*Server, *fakeBackend) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	if err := s.AddPages(fstest.MapFS{"testhome.html": {Data: []byte(testHomePage)}}, "*.html"); err != nil {
+		t.Fatal(err)
+	}
+	s.Handle("GET /{$}", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		s.Render(w, r, "testhome", nil)
+	}))
 	return s, fb
 }
 
@@ -142,7 +155,7 @@ func TestLayoutBeforeFirstIngest(t *testing.T) {
 	s, fb := newTestServer(t, Config{})
 	fb.chrome = Chrome{SaveName: "WorldSave"}
 	body := get(t, s.Handler(), "/").Body.String()
-	for _, want := range []string{"No save yet", "Waiting for a save", `Warnings <b>0</b>`, "No save has been ingested yet"} {
+	for _, want := range []string{"No save yet", "Waiting for a save", `Warnings <b>0</b>`} {
 		if !strings.Contains(body, want) {
 			t.Errorf("missing %q", want)
 		}
@@ -219,7 +232,7 @@ type titled struct{ T string }
 
 func (t titled) PageTitle() string { return t.T }
 
-func TestAddPagesRenderAndOverrideRoot(t *testing.T) {
+func TestAddPagesRenderAndReplaceRoute(t *testing.T) {
 	s, _ := newTestServer(t, Config{})
 	s.Funcs(map[string]any{"shout": strings.ToUpper})
 	err := s.AddPages(fstest.MapFS{
@@ -238,7 +251,7 @@ func TestAddPagesRenderAndOverrideRoot(t *testing.T) {
 
 	root := get(t, s.Handler(), "/").Body.String()
 	if !strings.Contains(root, `id="custom-home"`) || strings.Contains(root, `id="attention"`) {
-		t.Errorf("registering the root route must replace the shell:\n%s", root)
+		t.Errorf("re-registering a route must replace the earlier handler:\n%s", root)
 	}
 	rec := get(t, s.Handler(), "/orders")
 	body := rec.Body.String()
@@ -250,14 +263,6 @@ func TestAddPagesRenderAndOverrideRoot(t *testing.T) {
 	}
 	if frag := get(t, s.Handler(), "/orders", "X-Fragment", "1").Body.String(); strings.TrimSpace(frag) != "<h2>Orders for AB10</h2>" {
 		t.Errorf("fragment = %q", frag)
-	}
-}
-
-func TestRootOverrideWithPlainSlash(t *testing.T) {
-	s, _ := newTestServer(t, Config{})
-	s.Handle("/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { io.WriteString(w, "catch-all") }))
-	if got := get(t, s.Handler(), "/").Body.String(); got != "catch-all" {
-		t.Errorf("got %q", got)
 	}
 }
 

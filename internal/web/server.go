@@ -9,12 +9,10 @@ import (
 	"errors"
 	"fmt"
 	"html/template"
-	"io/fs"
 	"net"
 	"net/http"
 	"runtime"
 	"strconv"
-	"strings"
 	"sync"
 	"sync/atomic"
 	"syscall"
@@ -22,7 +20,7 @@ import (
 )
 
 // DefaultPort is the port the app uses when the user does not choose one.
-const DefaultPort = 8484
+const DefaultPort = 8080
 
 // Config controls where the server listens.
 type Config struct {
@@ -86,9 +84,8 @@ type Server struct {
 	chromeTmpl *template.Template
 }
 
-// New builds a server with the layout, static assets, /events and a minimal
-// dashboard shell at /. A view replaces the shell by calling Handle for "/" (or
-// "/{$}", optionally with a method) and registering its own page templates.
+// New builds a server with the layout, static assets and /events. Views add their
+// routes with Handle and their page templates with AddPages.
 func New(cfg Config, b Backend) (*Server, error) {
 	if b == nil {
 		return nil, errors.New("web: nil backend")
@@ -108,13 +105,6 @@ func New(cfg Config, b Backend) (*Server, error) {
 	if s.chromeTmpl, err = s.newTemplate("chrome"); err != nil {
 		return nil, err
 	}
-	sub, err := fs.Sub(assets, "templates")
-	if err != nil {
-		return nil, fmt.Errorf("web: embedded templates: %w", err)
-	}
-	if err := s.AddPages(sub, "dashboard.html"); err != nil {
-		return nil, err
-	}
 	s.routes["GET /static/"] = staticHandler()
 	s.routes["GET /events"] = http.HandlerFunc(s.events)
 	s.routes["GET /_chrome"] = http.HandlerFunc(s.chromeHandler)
@@ -124,8 +114,7 @@ func New(cfg Config, b Backend) (*Server, error) {
 
 // Handle registers handler for pattern, using net/http.ServeMux pattern syntax
 // ("GET /orders/{id}"). Registering the same pattern again replaces the earlier
-// handler. Registering a pattern for the root path ("/", "/{$}", with or without a
-// method) replaces the built-in dashboard shell. It is safe to call while serving.
+// handler. It is safe to call while serving.
 func (s *Server) Handle(pattern string, handler http.Handler) {
 	if handler == nil {
 		panic("web: nil handler for " + pattern)
@@ -156,25 +145,10 @@ func (s *Server) rebuild() {
 	s.rebuildLocked()
 }
 
-// isRootPattern reports whether a ServeMux pattern targets exactly the site root.
-func isRootPattern(p string) bool {
-	if i := strings.IndexByte(p, ' '); i >= 0 {
-		p = strings.TrimLeft(p[i+1:], " ")
-	}
-	return p == "/" || p == "/{$}"
-}
-
 func (s *Server) rebuildLocked() {
 	mux := http.NewServeMux()
-	hasRoot := false
 	for p, h := range s.routes {
 		mux.Handle(p, h)
-		hasRoot = hasRoot || isRootPattern(p)
-	}
-	if !hasRoot {
-		mux.HandleFunc("GET /{$}", func(w http.ResponseWriter, r *http.Request) {
-			s.Render(w, r, "dashboard", nil)
-		})
 	}
 	s.mux.Store(mux)
 }
