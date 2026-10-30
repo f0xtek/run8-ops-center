@@ -1,0 +1,82 @@
+name: CI
+
+# Checks for branches and pull requests. A push to a branch with an open pull
+# request into main fires both events, so the gate job lets only the pull
+# request run execute the checks.
+on:
+  push:
+    branches-ignore: [main]
+  pull_request:
+    branches: [main]
+    types: [opened, edited, synchronize, reopened]
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  gate:
+    name: gate
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      run: ${{ steps.decide.outputs.run }}
+    steps:
+      - id: decide
+        env:
+          EVENT: ${{ github.event_name }}
+          BRANCH: ${{ github.head_ref || github.ref_name }}
+          REPO: ${{ github.repository }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [ "$EVENT" = pull_request ]; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          # Same-repository pull requests into main from this branch. Only those
+          # start the pull request run, so only those make this run redundant.
+          open=$(gh pr list --repo "$REPO" --head "$BRANCH" --base main --state open \
+            --json isCrossRepository \
+            --jq '[.[] | select(.isCrossRepository | not)] | length')
+          if [ "$open" = 0 ]; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+            echo "No open pull request for $BRANCH, so this run checks the branch." >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "run=false" >> "$GITHUB_OUTPUT"
+            echo "An open pull request covers $BRANCH, so its run executes the checks and this one skips them." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+  tests:
+    name: Tests
+    needs: gate
+    if: needs.gate.outputs.run == 'true'
+    uses: ./.github/workflows/tests.yml
+
+  scripts:
+    name: scripts
+    needs: gate
+    if: needs.gate.outputs.run == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Version script tests
+        run: bash .github/scripts/next-version_test.sh
+      - name: Title check tests
+        run: bash .github/scripts/check-title_test.sh
+
+  pr-title:
+    name: pr-title
+    needs: gate
+    if: github.event_name == 'pull_request' && needs.gate.outputs.run == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check the pull request title
+        env:
+          TITLE: ${{ github.event.pull_request.title }}
+        run: bash .github/scripts/check-title.sh "$TITLE"
