@@ -26,8 +26,8 @@
 
 - [x] 4.1 Create `.github/workflows/release.yml` triggered by `push` to `main`, with `concurrency: { group: release, cancel-in-progress: false }`. Job `tests` calls `tests.yml`. Job `release` needs `tests`, runs on `ubuntu-latest` with `permissions: contents: write`, and has these steps: checkout with `fetch-depth: 0`, run `next-version.sh` and store the result, stop with a job summary line when the result is empty, `setup-go`, build with `CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -trimpath -ldflags "-s -w -X main.version=$VERSION" -o dist/run8ops.exe ./cmd/run8ops`, zip `run8ops.exe` and `README.md` as `run8ops_v${VERSION}_windows_amd64.zip`, write the SHA-256 file, generate `notes.md` with `next-version.sh --notes`, then run `gh release create "v$VERSION" --target "$GITHUB_SHA" --title "v$VERSION" --notes-file notes.md dist/*.zip dist/*.sha256` with `GH_TOKEN` set from `secrets.GITHUB_TOKEN`. Pass `VERSION` through `env:`, not by interpolating step output into the script text.
 - [x] 4.2 Smoke the build steps locally before the first run. On this machine run the cross-build command with `VERSION=0.1.0`, zip the output, compute the checksum with `shasum -a 256`, and run `next-version.sh --notes 0.1.0`. Verify that the zip holds `run8ops.exe` and `README.md`, that `file dist/run8ops.exe` reports a PE32+ x86-64 executable, and that the notes list the existing history by type. Delete `dist/` afterwards, and make sure `dist/` is in `.gitignore`.
-- [ ] 4.3 Merge the pull request from 3.3 with squash merge. Verify that the release run creates the tag `v0.1.0` on the merge commit and publishes a release with the zip, the checksum file and notes.
-- [ ] 4.4 Download the zip and checksum from the release. Verify that `shasum -a 256 -c` passes. On a Windows machine, or in a Windows runner step if no machine is at hand, run `run8ops.exe --version` and verify that it prints `run8ops 0.1.0` and exits with code 0.
+- [x] 4.3 Merge the pull request from 3.3 with squash merge. Verify that the release run creates the tag `v0.1.0` on the merge commit and publishes a release with the zip, the checksum file and notes.
+- [x] 4.4 Download the zip and checksum from the release. Verify that `shasum -a 256 -c` passes. On a Windows machine, or in a Windows runner step if no machine is at hand, run `run8ops.exe --version` and verify that it prints `run8ops 0.1.0` and exits with code 0.
 - [ ] 4.5 Merge a pull request titled `docs: fix a typo` and verify that the release run succeeds without creating a tag or a release and prints the no-release reason. Merge a pull request titled `fix: <small real fix>` and verify that `v0.1.1` is released.
 
 ## 5. Documentation
@@ -37,9 +37,9 @@
 
 ## 6. Repository settings (manual, outside the repo)
 
-- [ ] 6.1 In GitHub settings under General, Pull Requests, allow squash merging with "Default to pull request title" for the commit message. Turn off merge commits and rebase merging if the user wants squash only. Verify by opening a test pull request and checking the squash button's default message.
+- [x] 6.1 In GitHub settings under General, Pull Requests, allow squash merging with "Default to pull request title" for the commit message. Turn off merge commits and rebase merging if the user wants squash only. Verify by opening a test pull request and checking the squash button's default message.
 - [ ] 6.2 Add a branch protection rule or ruleset for `main` that requires the check names recorded in 3.3 and the `pr-title` check, and requires branches to be up to date. Verify that a pull request with a failing check cannot merge.
-- [ ] 6.3 Confirm under Actions settings that workflow permissions allow the `contents: write` that `release.yml` requests, and that Actions can create releases. Verify through the run in 4.3.
+- [x] 6.3 Confirm under Actions settings that workflow permissions allow the `contents: write` that `release.yml` requests, and that Actions can create releases. Verify through the run in 4.3.
 
 ## 7. Final check
 
