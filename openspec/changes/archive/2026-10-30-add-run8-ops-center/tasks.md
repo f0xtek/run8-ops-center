@@ -98,7 +98,7 @@
 ## 11. Integration and release
 
 - [x] 11.1 End-to-end smoke test on macOS: run the binary with `--data <tmp>/data --save WorldSave --save-dir <tmp>/Trains --autosave-dir <tmp>/AutoSaves`, with the temp folders standing in for the Run8 folders. Copy in the reference save, label a few tracks and start an order. Then drop an edited copy that completes it into `AutoSaves` as `Auto Save World 2026.10.30 19.15.00.xml`, and confirm. Verify the full lifecycle in the UI and in `state.json`.
-- [ ] 11.2 Cross-compile `run8ops.exe` (`GOOS=windows GOARCH=amd64`), and run it on the Run8 PC with only `--save <your world>`, against a live session with manual and auto-saves. Verify that:
+- [x] 11.2 Cross-compile `run8ops.exe` (`GOOS=windows GOARCH=amd64`), and run it on the Run8 PC with only `--save <your world>`, against a live session with manual and auto-saves. Verify that:
   - the setup view shows the AGS `Trains` and `AutoSaves` folders;
   - manual saves and auto-saves are each ingested within 10 s;
   - an auto-save from a different world is rejected with a warning;
