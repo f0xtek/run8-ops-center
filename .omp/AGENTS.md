@@ -8,6 +8,9 @@ A Go app that follows a Run8 Train Simulator V3 world save and generates freight
 - `examples/switchlist-tracker.html`: the UI mockup to follow for look and feel. It is git-ignored.
 - `references/`: Run8 sample saves, `IndustryConfiguration.csv`, `yard_and_train_limits.txt`, `TrainSymbolRoutings.xml` and the AGS guide and routing PDFs. It is git-ignored. The AGS guide (`AGS NS Birmingham Guide.pdf`) is the source of truth for how locals and yards operate.
 - `openspec/changes/add-run8-ops-center/`: the active plan (proposal, seven specs, design, tasks). Implement it with `/opsx-apply` and keep the artifacts in sync when decisions change. Run `openspec validate add-run8-ops-center --strict` after editing them.
+- `cmd/run8ops/` is the entry point (flags, wiring, end-to-end tests). `internal/` holds `run8save`, `profile`, `trackmap`, `carstatus`, `orders`, `store`, `watch`, `engine` and `web`. Dependency order is `run8save`, `profile`, then `trackmap`, `carstatus` and `orders`, with `engine` above them and `web` on top. Lower packages never import higher ones. Each package's `types.go` is its contract with the others.
+- `testdata/` holds byte-exact copies of the Run8 fixtures. `.gitattributes` marks it and `internal/profile/bundled/` as non-text so git keeps the CRLF line endings.
+- Check everything with `go vet ./... && go test -race ./...`. All writes go through `store.Guard`.
 
 ## Decisions the user has made
 
