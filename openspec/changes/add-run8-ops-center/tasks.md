@@ -63,8 +63,8 @@
 
 - [x] 8.1 Implement atomic JSON persistence for `settings.json` and `state.json` (orders, history, dwell, activity log capped at 2,000 entries) and data directory resolution (`--data`, `%APPDATA%\Run8OpsCenter`). Verify with a test that writes, reloads and checks equality, and that a simulated crash mid-write leaves the old file intact.
 - [x] 8.2 Implement the protected-path guard in `internal/store`, following design D2 and the save-ingestion requirements "Data and profile paths outside the Run8 install directory" and "Write guard". Apply it to `--data`, profile paths, install-folder changes and every write, rename or remove, including first-run profile installation from task 3.5. Verify with table tests for an inside path, case variants, a relative path, a symlinked path, a not-yet-existing target, the sibling `…V3 Ops` (allowed), and an install folder set after the data dir (rejected). Also verify that a startup test with `--data` inside the install dir exits before creating any file.
-- [ ] 8.3 Implement the single-writer engine pipeline (derive → reconcile → generate → persist → publish immutable View) with a command channel for UI actions and profile/settings changes. Verify with an engine test that feeds two snapshots and a start command and checks View contents. Run it under `go test -race`.
-- [ ] 8.4 Implement profile switching. Orders from other profiles are retained but hidden. Verify with an engine test that switches profiles and back.
+- [x] 8.3 Implement the single-writer engine pipeline (derive → reconcile → generate → persist → publish immutable View) with a command channel for UI actions and profile/settings changes. Verify with an engine test that feeds two snapshots and a start command and checks View contents. Run it under `go test -race`.
+- [x] 8.4 Implement profile switching. Orders from other profiles are retained but hidden. Verify with an engine test that switches profiles and back.
 
 ## 9. Save watching (`internal/watch`)
 
@@ -75,7 +75,7 @@
   - a matching newer auto-save is ingested;
   - an older one is skipped;
   - a file still growing is not ingested until stable.
-- [ ] 9.2 Wire watcher errors (missing folder, parse failure) into ingest warnings that keep the previous snapshot. Verify with an engine test that a truncated file produces a warning and leaves the View unchanged.
+- [x] 9.2 Wire watcher errors (missing folder, parse failure) into ingest warnings that keep the previous snapshot. Verify with an engine test that a truncated file produces a warning and leaves the View unchanged.
 - [ ] 9.3 Implement CLI save selection and the auto-save world check:
   - `--save` is required, with a case-insensitive name match with or without `.xml`, and must be a world save;
   - `--save-dir` and `--autosave-dir` default to the profile's `defaultSaveDir` and `defaultAutoSaveDir`;
