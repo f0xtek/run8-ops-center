@@ -76,7 +76,7 @@
   - an older one is skipped;
   - a file still growing is not ingested until stable.
 - [x] 9.2 Wire watcher errors (missing folder, parse failure) into ingest warnings that keep the previous snapshot. Verify with an engine test that a truncated file produces a warning and leaves the View unchanged.
-- [ ] 9.3 Implement CLI save selection and the auto-save world check:
+- [x] 9.3 Implement CLI save selection and the auto-save world check:
   - `--save` is required, with a case-insensitive name match with or without `.xml`, and must be a world save;
   - `--save-dir` and `--autosave-dir` default to the profile's `defaultSaveDir` and `defaultAutoSaveDir`;
   - startup picks the newest of the named save and the matching auto-saves;
@@ -86,18 +86,18 @@
 
 ## 10. Web UI (`internal/web`)
 
-- [ ] 10.1 Implement the HTTP server (default bind `127.0.0.1`, configurable port and all-interfaces option), the port-in-use error, the `--no-browser` flag, browser opening, and embedded static assets. Verify that a manual run prints the URL and opens it, and that a second instance exits with the port error.
+- [x] 10.1 Implement the HTTP server (default bind `127.0.0.1`, configurable port and all-interfaces option), the port-in-use error, the `--no-browser` flag, browser opening, and embedded static assets. Verify that a manual run prints the URL and opens it, and that a second instance exits with the port error.
 - [x] 10.2 Port the example's styling (CSS variables, light/dark, tiles, cards, pills, chips, offline font stacks) into a base layout with a header showing save name, game date and last ingest. Verify visually in a browser against `examples/switchlist-tracker.html`.
 - [x] 10.3 Implement the dashboard: summary tiles, active orders, available orders by kind, road train build percentage and the attention list. Verify by loading the reference save and checking that the tile counts match the car-status test expectations.
 - [x] 10.4 Implement the order detail switchlist views: local orders with industry and yard lines, and road orders with departing consist and ordered stops. Show only the actions valid for each state, and mark cars shared between available orders. Verify in a browser by starting a whole job and a single yard line, then continuing, confirming and cancelling orders against fixture-driven state.
 - [x] 10.5 Implement the yards & industries view, with per-type occupancy against capacity. Verify that HTI's occupancy displays correctly with a labelled fixture track map.
 - [x] 10.6 Implement the learn-mode view (candidates, suggestions, accept or override, label list with rename, relabel and remove). Verify in a browser by labelling a cut, then checking that it leaves the list and the counts update.
 - [x] 10.7 Implement the setup view (read-only world save name and save/auto-save folders from the CLI, Run8 install folder, profile selection, per-train thresholds and max age, port and bind with a restart notice, validation report) and the activity log view. Verify that the setup view shows the `--save` name read-only, and that changing 108's minimum recomputes the orders immediately.
-- [ ] 10.8 Implement the SSE `/events` endpoint and the fragment refresh JS. Verify that dropping a new matching auto-save into the watched auto-save folder updates an open dashboard without reloading.
+- [x] 10.8 Implement the SSE `/events` endpoint and the fragment refresh JS. Verify that dropping a new matching auto-save into the watched auto-save folder updates an open dashboard without reloading.
 
 ## 11. Integration and release
 
-- [ ] 11.1 End-to-end smoke test on macOS: run the binary with `--data <tmp>/data --save WorldSave --save-dir <tmp>/Trains --autosave-dir <tmp>/AutoSaves`, with the temp folders standing in for the Run8 folders. Copy in the reference save, label a few tracks and start an order. Then drop an edited copy that completes it into `AutoSaves` as `Auto Save World 2026.10.30 19.15.00.xml`, and confirm. Verify the full lifecycle in the UI and in `state.json`.
+- [x] 11.1 End-to-end smoke test on macOS: run the binary with `--data <tmp>/data --save WorldSave --save-dir <tmp>/Trains --autosave-dir <tmp>/AutoSaves`, with the temp folders standing in for the Run8 folders. Copy in the reference save, label a few tracks and start an order. Then drop an edited copy that completes it into `AutoSaves` as `Auto Save World 2026.10.30 19.15.00.xml`, and confirm. Verify the full lifecycle in the UI and in `state.json`.
 - [ ] 11.2 Cross-compile `run8ops.exe` (`GOOS=windows GOARCH=amd64`), and run it on the Run8 PC with only `--save <your world>`, against a live session with manual and auto-saves. Verify that:
   - the setup view shows the AGS `Trains` and `AutoSaves` folders;
   - manual saves and auto-saves are each ingested within 10 s;
