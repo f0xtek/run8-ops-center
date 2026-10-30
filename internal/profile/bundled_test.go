@@ -2,6 +2,8 @@ package profile
 
 import (
 	"bytes"
+	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -71,25 +73,310 @@ func TestInstallBundledOnEmptyDataDir(t *testing.T) {
 	}
 }
 
-func TestInstallBundledNeverOverwrites(t *testing.T) {
+// failingWriter fails WriteFile for one file name and writes everything else
+// to the real file system.
+type failingWriter struct {
+	recordingWriter
+	failOn string
+}
+
+func (w *failingWriter) WriteFile(p string, data []byte, perm os.FileMode) error {
+	if filepath.Base(p) == w.failOn {
+		return errors.New("disk full")
+	}
+	return w.recordingWriter.WriteFile(p, data, perm)
+}
+
+// oldProfile is an installed profile of an older version: the files carry
+// user edits, and trackmap.json sits beside them.
+type oldProfile struct {
+	dir   string
+	files map[string]string // file name -> content
+}
+
+// installOld installs the bundled profile, then replaces its three files
+// with edited copies whose profile.yaml starts with header. It adds a
+// trackmap.json.
+func installOld(t *testing.T, header string) oldProfile {
+	t.Helper()
 	profiles := t.TempDir()
 	if err := InstallBundled(&recordingWriter{}, profiles); err != nil {
 		t.Fatal(err)
 	}
-	yamlPath := filepath.Join(profiles, BundledID, ProfileFile)
-	if err := os.WriteFile(yamlPath, []byte("# user edit\n"), 0o644); err != nil {
+	o := oldProfile{
+		dir: filepath.Join(profiles, BundledID),
+		files: map[string]string{
+			ProfileFile:     header + "# user edit\nid: ags-south-p1\nunknownFutureKey: true\n",
+			IndustryFile:    "# edited csv\n",
+			LimitsFile:      "# edited tsv\n",
+			"trackmap.json": `{"labels":{"280/1":{"kind":"yard"}}}` + "\r\n",
+			"notes-by-user": "keep me",
+		},
+	}
+	for name, content := range o.files {
+		if err := os.WriteFile(filepath.Join(o.dir, name), []byte(content), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	return o
+}
+
+// snapshotDir returns the content of every file in dir by name.
+func snapshotDir(t *testing.T, dir string) map[string]string {
+	t.Helper()
+	entries, err := os.ReadDir(dir)
+	if err != nil {
 		t.Fatal(err)
 	}
+	out := map[string]string{}
+	for _, e := range entries {
+		b, err := os.ReadFile(filepath.Join(dir, e.Name()))
+		if err != nil {
+			t.Fatal(err)
+		}
+		out[e.Name()] = string(b)
+	}
+	return out
+}
+
+func TestInstallBundledUpgradesOlderProfile(t *testing.T) {
+	for _, header := range []string{"", "schemaVersion: 1\n"} {
+		o := installOld(t, header)
+		w := &recordingWriter{}
+		if err := InstallBundled(w, filepath.Dir(o.dir)); err != nil {
+			t.Fatal(err)
+		}
+
+		var wrote []string
+		for _, p := range w.paths {
+			wrote = append(wrote, filepath.Base(p))
+		}
+		wantOrder := []string{
+			IndustryFile + ".v1.bak", IndustryFile,
+			LimitsFile + ".v1.bak", LimitsFile,
+			ProfileFile + ".v1.bak", ProfileFile,
+		}
+		if !reflect.DeepEqual(wrote, wantOrder) {
+			t.Errorf("header %q: write order = %v, want %v", header, wrote, wantOrder)
+		}
+
+		got := snapshotDir(t, o.dir)
+		for _, name := range bundledFiles {
+			fresh, err := bundledFS.ReadFile("bundled/ags-south-p1/" + name)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if got[name] != string(fresh) {
+				t.Errorf("%s was not replaced by the bundled file", name)
+			}
+			if got[name+".v1.bak"] != o.files[name] {
+				t.Errorf("%s.v1.bak = %q, want the old file %q", name, got[name+".v1.bak"], o.files[name])
+			}
+		}
+		for _, name := range []string{"trackmap.json", "notes-by-user"} {
+			if got[name] != o.files[name] {
+				t.Errorf("%s changed: %q", name, got[name])
+			}
+		}
+		if len(got) != len(o.files)+3 {
+			t.Errorf("folder holds %d files, want the %d old ones plus 3 backups: %v", len(got), len(o.files), got)
+		}
+
+		p, err := Load(o.dir)
+		if err != nil {
+			t.Fatalf("upgraded profile does not load: %v", err)
+		}
+		if p.SchemaVersion != BundledSchemaVersion {
+			t.Errorf("SchemaVersion = %d", p.SchemaVersion)
+		}
+
+		// A second start finds the current version and writes nothing.
+		w2 := &recordingWriter{}
+		if err := InstallBundled(w2, filepath.Dir(o.dir)); err != nil {
+			t.Fatal(err)
+		}
+		if len(w2.paths) != 0 {
+			t.Errorf("second start wrote %v", w2.paths)
+		}
+	}
+}
+
+func TestInstallBundledLeavesCurrentAndNewerProfilesAlone(t *testing.T) {
+	for _, header := range []string{
+		fmt.Sprintf("schemaVersion: %d\n", BundledSchemaVersion),
+		fmt.Sprintf("schemaVersion: %d\n", BundledSchemaVersion+1),
+	} {
+		o := installOld(t, header)
+		before := snapshotDir(t, o.dir)
+		w := &recordingWriter{}
+		if err := InstallBundled(w, filepath.Dir(o.dir)); err != nil {
+			t.Fatal(err)
+		}
+		if len(w.paths) != 0 {
+			t.Errorf("%q: wrote %v", header, w.paths)
+		}
+		if after := snapshotDir(t, o.dir); !reflect.DeepEqual(before, after) {
+			t.Errorf("%q: folder changed:\nbefore %v\nafter  %v", header, before, after)
+		}
+	}
+}
+
+func TestInstallBundledLeavesUnparseableProfileAlone(t *testing.T) {
+	o := installOld(t, "")
+	broken := "schemaVersion: 1\nid: [unclosed\n"
+	if err := os.WriteFile(filepath.Join(o.dir, ProfileFile), []byte(broken), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	before := snapshotDir(t, o.dir)
+	w := &recordingWriter{}
+	if err := InstallBundled(w, filepath.Dir(o.dir)); err != nil {
+		t.Fatalf("InstallBundled must not fail on an unparseable profile: %v", err)
+	}
+	if len(w.paths) != 0 {
+		t.Errorf("wrote %v", w.paths)
+	}
+	if after := snapshotDir(t, o.dir); !reflect.DeepEqual(before, after) {
+		t.Errorf("folder changed")
+	}
+	if _, err := Load(o.dir); err == nil || !strings.Contains(err.Error(), "parse") {
+		t.Errorf("Load error = %v, want the parse error", err)
+	}
+}
+
+func TestInstallBundledMissingProfileYAMLWritesNothing(t *testing.T) {
+	o := installOld(t, "")
+	if err := os.Remove(filepath.Join(o.dir, ProfileFile)); err != nil {
+		t.Fatal(err)
+	}
+	w := &recordingWriter{}
+	if err := InstallBundled(w, filepath.Dir(o.dir)); err != nil {
+		t.Fatal(err)
+	}
+	if len(w.paths) != 0 {
+		t.Errorf("wrote %v", w.paths)
+	}
+}
+
+func TestInstallBundledInterruptedUpgradeCompletesAtNextRun(t *testing.T) {
+	o := installOld(t, "")
+	profiles := filepath.Dir(o.dir)
+
+	// The upgrade fails before profile.yaml is replaced.
+	err := InstallBundled(&failingWriter{failOn: ProfileFile}, profiles)
+	if err == nil || !strings.Contains(err.Error(), ProfileFile) {
+		t.Fatalf("InstallBundled error = %v, want a profile.yaml write failure", err)
+	}
+	got := snapshotDir(t, o.dir)
+	if got[ProfileFile] != o.files[ProfileFile] {
+		t.Fatalf("profile.yaml changed in an interrupted upgrade: %q", got[ProfileFile])
+	}
+	if p, err := Load(o.dir); err == nil && p.SchemaVersion >= BundledSchemaVersion {
+		t.Fatalf("interrupted upgrade left a profile at version %d", p.SchemaVersion)
+	}
+
+	// The next start finishes the job and keeps the user's original files.
 	w := &recordingWriter{}
 	if err := InstallBundled(w, profiles); err != nil {
 		t.Fatal(err)
 	}
-	if len(w.paths) != 0 {
-		t.Errorf("second install wrote %v", w.paths)
+	got = snapshotDir(t, o.dir)
+	for _, name := range bundledFiles {
+		fresh, _ := bundledFS.ReadFile("bundled/ags-south-p1/" + name)
+		if got[name] != string(fresh) {
+			t.Errorf("%s not upgraded", name)
+		}
+		if got[name+".v1.bak"] != o.files[name] {
+			t.Errorf("%s.v1.bak = %q, want the user's original %q", name, got[name+".v1.bak"], o.files[name])
+		}
 	}
-	got, _ := os.ReadFile(yamlPath)
-	if string(got) != "# user edit\n" {
-		t.Errorf("user edit overwritten: %q", got)
+	if got["trackmap.json"] != o.files["trackmap.json"] {
+		t.Errorf("trackmap.json changed")
+	}
+	if _, err := Load(o.dir); err != nil {
+		t.Errorf("upgraded profile does not load: %v", err)
+	}
+}
+
+func TestBundledSchemaVersionMatchesEmbeddedYAML(t *testing.T) {
+	p, _ := installBundled(t)
+	if p.SchemaVersion != BundledSchemaVersion {
+		t.Errorf("embedded profile.yaml has schemaVersion %d, BundledSchemaVersion is %d", p.SchemaVersion, BundledSchemaVersion)
+	}
+	data, _ := bundledFS.ReadFile("bundled/ags-south-p1/profile.yaml")
+	if strings.Contains(string(data), "never overwrites") {
+		t.Error("profile.yaml still promises it is never overwritten")
+	}
+}
+
+func TestBundledRun8Config(t *testing.T) {
+	p, _ := installBundled(t)
+	r := p.Run8
+	if r == nil {
+		t.Fatal("Run8 = nil")
+	}
+	if r.Region != "GulfCoast" {
+		t.Errorf("Region = %q", r.Region)
+	}
+	if want := []Run8Route{{Folder: "NS_AGS_Phase01", Prefix: 280}}; !reflect.DeepEqual(r.Routes, want) {
+		t.Errorf("Routes = %+v", r.Routes)
+	}
+	if want := []Run8Hump{{Controller: "Norris Yard Hump Controller", Yard: "NOR", TrackPrefix: "Bowl"}}; !reflect.DeepEqual(r.Humps, want) {
+		t.Errorf("Humps = %+v", r.Humps)
+	}
+	if len(r.TrackEnds) != 1 {
+		t.Fatalf("TrackEnds = %+v", r.TrackEnds)
+	}
+	te := r.TrackEnds[0]
+	if te.Yard != "NOR" || te.TrackPrefix != "Receiving" {
+		t.Errorf("TrackEnds[0] = %+v", te)
+	}
+	for name, wantEnd := range map[string]string{
+		"Norris RCV 3 South End":  "South",
+		"Norris RCV 3 North end":  "North",
+		"Norris RCV 12 north END": "north",
+	} {
+		m := te.Pattern.FindStringSubmatch(name)
+		if m == nil || m[te.Pattern.SubexpIndex("end")] != wantEnd {
+			t.Errorf("pattern on %q = %v", name, m)
+		}
+	}
+	for _, name := range []string{"Norris RCV 3 East end", "Norris Yard Hump Controller", "XNorris RCV 3 North end"} {
+		if te.Pattern.MatchString(name) {
+			t.Errorf("pattern must not match %q", name)
+		}
+	}
+}
+
+func TestBundledAnchors(t *testing.T) {
+	p, _ := installBundled(t)
+	type anchors struct{ mileposts, industries []string }
+	want := map[string]anchors{
+		"NOR":  {mileposts: []string{"Receiving Yard", "West Forwarding Yard", "East Forwarding Yard"}},
+		"32ND": {mileposts: []string{"32nd St Yard"}},
+		"TUS":  {mileposts: []string{"Tuscaloosa MP 199.1"}},
+		"MCC":  {industries: []string{"BRI"}},
+		"BES":  {industries: []string{"BRL"}},
+	}
+	for code, w := range want {
+		y := p.YardByCode(code)
+		if y == nil {
+			t.Errorf("yard %s missing", code)
+			continue
+		}
+		if !reflect.DeepEqual(y.AnchorMileposts, w.mileposts) {
+			t.Errorf("%s AnchorMileposts = %v, want %v", code, y.AnchorMileposts, w.mileposts)
+		}
+		if !reflect.DeepEqual(y.AnchorIndustries, w.industries) {
+			t.Errorf("%s AnchorIndustries = %v, want %v", code, y.AnchorIndustries, w.industries)
+		}
+	}
+	for _, code := range []string{CodeInvalidRun8, CodeUnmatchedAnchor} {
+		if got := problemsOf(p, code); len(got) != 0 {
+			t.Errorf("%s problems: %+v", code, got)
+		}
+	}
+	if got := p.ValidateAnchors([]string{"Receiving Yard", "West Forwarding Yard", "East Forwarding Yard", "32nd St Yard", "Tuscaloosa MP 199.1"}); len(got) != 0 {
+		t.Errorf("ValidateAnchors with every AGS milepost: %+v", got)
 	}
 }
 

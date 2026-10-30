@@ -16,6 +16,7 @@ const (
 
 // fileSchema is the root of profile.yaml.
 type fileSchema struct {
+	SchemaVersion      int                          `yaml:"schemaVersion"`
 	ID                 string                       `yaml:"id"`
 	Name               string                       `yaml:"name"`
 	DefaultSaveDir     string                       `yaml:"defaultSaveDir"`
@@ -29,11 +30,38 @@ type fileSchema struct {
 	Aliases            map[string]string            `yaml:"aliases"`
 	YardInternalTags   []string                     `yaml:"yardInternalTags"`
 	RoutePrefixes      []int                        `yaml:"routePrefixes"`
+	Run8               *run8Schema                  `yaml:"run8"`
+}
+
+type run8Schema struct {
+	Region    string            `yaml:"region"`
+	Routes    []run8RouteSchema `yaml:"routes"`
+	Humps     []run8HumpSchema  `yaml:"humps"`
+	TrackEnds []run8EndsSchema  `yaml:"trackEnds"`
+}
+
+type run8RouteSchema struct {
+	Folder string `yaml:"folder"`
+	Prefix int    `yaml:"prefix"`
+}
+
+type run8HumpSchema struct {
+	Controller  string `yaml:"controller"`
+	Yard        string `yaml:"yard"`
+	TrackPrefix string `yaml:"trackPrefix"`
+}
+
+type run8EndsSchema struct {
+	Pattern     string `yaml:"pattern"`
+	Yard        string `yaml:"yard"`
+	TrackPrefix string `yaml:"trackPrefix"`
 }
 
 type yardSchema struct {
-	Code string `yaml:"code"`
-	Name string `yaml:"name"`
+	Code             string   `yaml:"code"`
+	Name             string   `yaml:"name"`
+	AnchorMileposts  []string `yaml:"anchorMileposts"`
+	AnchorIndustries []string `yaml:"anchorIndustries"`
 }
 
 // limitSchema overrides limits from the limits file. A nil field keeps the

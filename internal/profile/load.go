@@ -40,6 +40,10 @@ func Load(dir string) (*Profile, error) {
 		}
 		return nil, fmt.Errorf("profile: parse %s: %w", ProfileFile, err)
 	}
+	version := schemaVersionOf(s.SchemaVersion)
+	if version > BundledSchemaVersion {
+		return nil, fmt.Errorf("profile: %s has schemaVersion %d, but this build supports up to %d", ProfileFile, version, BundledSchemaVersion)
+	}
 
 	f, err := os.Open(filepath.Join(dir, IndustryFile))
 	if err != nil {
@@ -68,8 +72,21 @@ func Load(dir string) (*Profile, error) {
 	}
 
 	p := build(dir, &s, industries, rows)
+	p.SchemaVersion = version
+	var run8Problems []Problem
+	p.Run8, run8Problems = buildRun8(p, s.Run8)
 	p.Report = validate(p, rows)
+	p.Report.Problems = append(p.Report.Problems, run8Problems...)
 	return p, nil
+}
+
+// schemaVersionOf returns the effective schema version: a profile without
+// one, or with a value below 1, is version 1.
+func schemaVersionOf(v int) int {
+	if v < 1 {
+		return 1
+	}
+	return v
 }
 
 // build assembles a Profile from the parsed files.
@@ -98,7 +115,12 @@ func build(dir string, s *fileSchema, industries []Industry, rows []limitRow) *P
 	}
 
 	for _, y := range s.Yards {
-		p.Yards = append(p.Yards, Yard{Code: strings.TrimSpace(y.Code), Name: strings.TrimSpace(y.Name)})
+		p.Yards = append(p.Yards, Yard{
+			Code:             strings.TrimSpace(y.Code),
+			Name:             strings.TrimSpace(y.Name),
+			AnchorMileposts:  normTags(y.AnchorMileposts),
+			AnchorIndustries: normTags(y.AnchorIndustries),
+		})
 	}
 
 	for _, j := range s.LocalJobs {

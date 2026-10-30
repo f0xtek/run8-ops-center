@@ -2,7 +2,7 @@
 
 A route profile tells the Run8 Operations Centre how one Run8 route is operated. It lists the industries, yards, local jobs, road trains, train limits and car types. The app has no route knowledge of its own, so a new route needs a new profile and no code change.
 
-On first run the app installs the AGS South Phase 1 profile into `<data>/profiles/ags-south-p1/`. It never overwrites an installed profile, so you can edit those files freely.
+On first run the app installs the AGS South Phase 1 profile into `<data>/profiles/ags-south-p1/`. When a later version of the app ships a newer profile schema, it replaces the installed copy and keeps your old files as backups. See [Bundled profile upgrade](#bundled-profile-upgrade).
 
 ## Profile folder
 
@@ -14,7 +14,7 @@ Each profile is a folder under `<data>/profiles/`. The folder name is the profil
 | `IndustryConfiguration.csv` | yes | The route's industry table, copied from Run8. |
 | `train_limits.tsv` | no | The route's train limits table, copied from Run8. Without it, nothing has a limit unless `profile.yaml` sets one. |
 
-The app reads these files and never writes to them after the first-run install. It also never writes anywhere inside the Run8 install folder.
+The app reads these files. It writes them only on first run and during a bundled profile upgrade, and it never writes anywhere inside the Run8 install folder.
 
 ## IndustryConfiguration.csv
 
@@ -54,6 +54,7 @@ Unknown keys are an error, so a misspelled field stops the load instead of being
 
 | Field | Meaning |
 |---|---|
+| `schemaVersion` | Version of the profile format. Leave it out for version 1. The app refuses a profile whose version is newer than the one it supports, and the error names both numbers. The bundled AGS profile is version 2. |
 | `id` | Profile ID. Defaults to the folder name. |
 | `name` | Display name. Defaults to the ID. |
 | `defaultSaveDir` | Run8 folder that holds the world saves. |
@@ -65,6 +66,10 @@ Unknown keys are an error, so a misspelled field stops the load instead of being
 |---|---|
 | `yards[].code` | Short code used everywhere else in the file, for example `NOR`. |
 | `yards[].name` | Display name, for example `Norris`. |
+| `yards[].anchorMileposts` | Run8 milepost station names that mark where the yard is, for example `Receiving Yard`. Matching is exact after whitespace is collapsed. A name that matches no milepost is reported once the route data has been read. |
+| `yards[].anchorIndustries` | Incoming tags of industries that mark where the yard is, for example `BRI`. Use an industry anchor when no milepost sits near the yard. A tag that is not a profile industry is reported. |
+
+Learn mode uses anchors to suggest a yard for a cut that sits outside every labelled track, when an anchor lies within 3 km.
 
 ### Local jobs
 
@@ -129,6 +134,24 @@ The first matching rule wins, so put longer or more specific prefixes first. A m
 | `yardInternalTags` | Tags that mean the car stays in its yard, for example `NOR Hump`. |
 | `routePrefixes` | Track section prefixes that belong to this route. |
 
+### Run8 route data
+
+The `run8` block tells the app where to find the route's binary data files under the Run8 install folder, and how to name the tracks it imports from them. The block is optional. Without it, the profile has no track import.
+
+| Field | Meaning |
+|---|---|
+| `run8.region` | Name of the region folder under `Content\V3Routes\Regions`, for example `GulfCoast`. The app reads `Config.ind` and `Hump.r8` from it. An invalid region drops the whole `run8` block. |
+| `run8.routes[].folder` | Name of a route folder under `Content\V3Routes`, for example `NS_AGS_Phase01`. The app reads `TrackDatabase.r8`, `HumpControllerList.r8`, `AISpecialLocations.r8` and `MilepostDatabase.r8` from it. |
+| `run8.routes[].prefix` | Track section prefix the route covers. It must also appear in `routePrefixes`. Hump paths hold only section numbers, so they take the prefix of their route. |
+| `run8.humps[].controller` | Name of a hump controller in `HumpControllerList.r8`, for example `Norris Yard Hump Controller`. |
+| `run8.humps[].yard` | Code of the yard the hump belongs to. |
+| `run8.humps[].trackPrefix` | Word that starts the label of each bowl track, for example `Bowl`, which gives `NOR / Bowl 1`. |
+| `run8.trackEnds[].pattern` | Regular expression that matches the names of the special locations at the two ends of a numbered track. It needs the named groups `n` for the track number and `end` for `North` or `South`. The app uses the pattern as written, so start it with `(?i)` to ignore case. |
+| `run8.trackEnds[].yard` | Code of the yard the tracks belong to. |
+| `run8.trackEnds[].trackPrefix` | Word that starts the label of each track, for example `Receiving`, which gives `NOR / Receiving 1`. |
+
+Every folder name must be a single name. A name that is empty, absolute, or contains a path separator, a drive colon or `..` is rejected, so the profile can never point the app outside the Run8 install folder. The app drops each invalid entry and reports it. A hump or `trackEnds` entry that names an unknown yard is dropped and reported.
+
 ## Validation report
 
 Loading a profile never fails because of a validation problem. The loader loads everything that is valid and lists the rest in the profile report.
@@ -138,12 +161,28 @@ Loading a profile never fails because of a validation problem. The loader loads 
 | `orphan-tag` | An outgoing tag that no road train, stop pick-up, local job, yard line, yard-internal tag or alias handles. The message lists the industries that produce it. |
 | `malformed-tag` | A tag that contains a space. |
 | `unserved-industry` | An industry that no local job lists, no road train stops at and no road train carries off the map. |
-| `unknown-ref` | A yard, industry or alias target that does not exist. |
+| `unknown-ref` | A yard, industry or alias target that does not exist. This includes a `run8` hump or `trackEnds` yard and a yard `anchorIndustries` tag that does not exist. |
 | `duplicate-tag` | An incoming tag, job ID, train symbol or class code used twice, or an outgoing tag listed twice in one row. |
 | `unmapped-car-type` | An industry car type that no `carTypes` rule produces. |
 | `unmatched-model` | A car model in a save that matches no `carTypes` rule. This code comes from checking a save's models against the profile, not from loading. |
+| `invalid-run8` | A `run8` entry the app dropped: a region or folder name that is empty, absolute or contains a separator or `..`, a route prefix that is missing from `routePrefixes`, a hump with no controller name, or a `trackEnds` pattern that does not compile or lacks the `n` and `end` groups. |
+| `unmatched-anchor` | A yard `anchorMileposts` name that matches no milepost station name. The app reports it after it reads the route data, so it appears in the report only then. |
 
 To clear an `orphan-tag` problem, add an alias, add the tag to a train's `classCodes`, or add it to a stop's `pickUp`.
+
+## Bundled profile upgrade
+
+A profile declares its `schemaVersion`, and a profile without one is version 1. At startup the app compares the bundled AGS profile's version with the installed `ags-south-p1` copy. It reads only the `schemaVersion` key of the installed `profile.yaml`.
+
+| Installed copy | What the app does |
+|---|---|
+| Older than the bundled version | Replaces `IndustryConfiguration.csv`, `train_limits.tsv` and `profile.yaml`, in that order. Before it replaces a file, it saves the old one as `<name>.v<old>.bak`, for example `profile.yaml.v1.bak`. |
+| Same version or newer | Writes nothing, so your edits stay. |
+| `profile.yaml` does not parse | Writes nothing. The profile load reports the parse error. |
+
+`profile.yaml` goes last, so an upgrade that stops half way leaves the old version number in place, and the next start finishes it. The app never touches `trackmap.json` or any other file in the folder.
+
+The upgrade discards your edits to the three bundled files. To keep an edit, copy it from the `.bak` file into the new file. To roll back to the older app, restore the `.bak` files, because an older app rejects the new keys in `profile.yaml`.
 
 ## Adding a route
 
