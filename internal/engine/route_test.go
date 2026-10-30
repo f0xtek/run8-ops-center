@@ -3,6 +3,7 @@ package engine
 import (
 	"encoding/json"
 	"errors"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -114,14 +115,18 @@ func TestRouteDataReloadedAfterSetInstallDir(t *testing.T) {
 		t.Fatalf("warnings = %+v", warns)
 	}
 	want := run8routetest.RoutePath(store.DefaultInstallDir, run8routetest.Route, run8route.TrackDBFile)
+	f, ok := fileStatus(v, run8route.TrackDBFile)
+	if !ok || !errors.Is(f.Err, fs.ErrNotExist) {
+		t.Fatalf("track database status = %+v, want a not-exist error", f)
+	}
 	found := false
 	for _, w := range warns {
-		if strings.Contains(w.Message, want) && strings.Contains(w.Message, "no such file") {
+		if strings.Contains(w.Message, want) && strings.Contains(w.Message, reason(f.Err)) {
 			found = true
 		}
 	}
 	if !found {
-		t.Errorf("no warning names %s and the reason: %+v", want, warns)
+		t.Errorf("no warning names %s and the reason %q: %+v", want, reason(f.Err), warns)
 	}
 
 	root := t.TempDir()
@@ -149,11 +154,11 @@ func TestMissingRouteFileIsAWarning(t *testing.T) {
 		t.Fatalf("Run8 = %+v", v.Run8)
 	}
 	f, ok := fileStatus(v, run8route.TrackDBFile)
-	if !ok || f.Path != track || len(v.Run8.Unavailable) != 1 {
+	if !ok || f.Path != track || len(v.Run8.Unavailable) != 1 || !errors.Is(f.Err, fs.ErrNotExist) {
 		t.Fatalf("unavailable = %+v", v.Run8.Unavailable)
 	}
 	w := run8Warnings(v)
-	if len(w) != 1 || !strings.Contains(w[0].Message, track) || !strings.Contains(w[0].Message, "no such file") {
+	if len(w) != 1 || !strings.Contains(w[0].Message, track) || !strings.Contains(w[0].Message, reason(f.Err)) {
 		t.Fatalf("warnings = %+v", w)
 	}
 	// The other files still work: the import offers the industry labels.
