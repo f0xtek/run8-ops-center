@@ -2,8 +2,8 @@
 
 ## 1. Project setup
 
-- [ ] 1.1 Initialise the Go module (`go mod init`, Go 1.26) with the `cmd/run8ops` and `internal/*` package layout from design D3. Add the `fsnotify` and `yaml.v3` dependencies. Verify that `go build ./...` and `go vet ./...` succeed.
-- [ ] 1.2 Copy the fixtures into `testdata/`: `WorldSave.xml`/`.info`, `Auto Save World 2026.10.28 17.28.02.xml`/`.info`, `29K.xml`/`.info`, `Bessemer Yard.xml`/`.info`, `IndustryConfiguration.csv` and `yard_and_train_limits.txt`. Verify that the files are present and byte-identical to `references/`.
+- [x] 1.1 Initialise the Go module (`go mod init`, Go 1.26) with the `cmd/run8ops` and `internal/*` package layout from design D3. Add the `fsnotify` and `yaml.v3` dependencies. Verify that `go build ./...` and `go vet ./...` succeed.
+- [x] 1.2 Copy the fixtures into `testdata/`: `WorldSave.xml`/`.info`, `Auto Save World 2026.10.28 17.28.02.xml`/`.info`, `29K.xml`/`.info`, `Bessemer Yard.xml`/`.info`, `IndustryConfiguration.csv` and `yard_and_train_limits.txt`. Verify that the files are present and byte-identical to `references/`.
 
 ## 2. World save parsing (`internal/run8save`)
 
