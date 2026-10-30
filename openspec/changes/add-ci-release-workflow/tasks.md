@@ -38,9 +38,9 @@
 ## 6. Repository settings (manual, outside the repo)
 
 - [x] 6.1 In GitHub settings under General, Pull Requests, allow squash merging with "Default to pull request title" for the commit message. Turn off merge commits and rebase merging if the user wants squash only. Verify by opening a test pull request and checking the squash button's default message.
-- [ ] 6.2 Add a branch protection rule or ruleset for `main` that requires the check names recorded in 3.3 and the `pr-title` check, and requires branches to be up to date. Verify that a pull request with a failing check cannot merge.
+- [x] 6.2 Add a branch protection rule or ruleset for `main` that requires the check names recorded in 3.3 and the `pr-title` check, and requires branches to be up to date. Verify that a pull request with a failing check cannot merge.
 - [x] 6.3 Confirm under Actions settings that workflow permissions allow the `contents: write` that `release.yml` requests, and that Actions can create releases. Verify through the run in 4.3.
 
 ## 7. Final check
 
-- [ ] 7.1 Run `go vet ./... && go test -race ./...` and both script tests locally. Run `openspec validate add-ci-release-workflow --strict`. Verify that all pass and that `git status` shows only the intended files.
+- [x] 7.1 Run `go vet ./... && go test -race ./...` and both script tests locally. Run `openspec validate add-ci-release-workflow --strict`. Verify that all pass and that `git status` shows only the intended files.
