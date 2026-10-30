@@ -7,10 +7,10 @@
 
 ## 2. World save parsing (`internal/run8save`)
 
-- [ ] 2.1 Implement `ScnInfo` sidecar decoding (`SaveType`, `Filename`, `DisplayFilename`, `FileTimestamp`, which may be missing). Verify that the unit tests return `World`, `Train` and `ExtraBoard` for the three fixtures.
-- [ ] 2.2 Implement the streaming `ScnLoader` decoder that produces a Snapshot with trains, vehicles and both truck positions, game date and save type, skipping signals and switches; `description` is optional. Verify that a test on the `WorldSave.xml` fixture gives 31 trains, 498 vehicles, 40 locomotives, 458 freight cars and the game date `2026-10-28T17:22:23.7433957Z`. Also verify that the auto-save fixture (no `description`) parses to the same counts with game date `2026-10-28T17:12:47.1275649Z`.
-- [ ] 2.3 Classify each train as a cut or a powered train and take the symbol from the lead locomotive's tag (spec: Cut and train distinction). Verify that a test shows the `29K.xml` fixture's train with symbol `29K` and that the fixture's loco-free trains are cuts.
-- [ ] 2.4 Make invalid or truncated XML return an error and never a partial snapshot. Verify with a test that feeds the reference save truncated at its midpoint.
+- [x] 2.1 Implement `ScnInfo` sidecar decoding (`SaveType`, `Filename`, `DisplayFilename`, `FileTimestamp`, which may be missing). Verify that the unit tests return `World`, `Train` and `ExtraBoard` for the three fixtures.
+- [x] 2.2 Implement the streaming `ScnLoader` decoder that produces a Snapshot with trains, vehicles and both truck positions, game date and save type, skipping signals and switches; `description` is optional. Verify that a test on the `WorldSave.xml` fixture gives 31 trains, 498 vehicles, 40 locomotives, 458 freight cars and the game date `2026-10-28T17:22:23.7433957Z`. Also verify that the auto-save fixture (no `description`) parses to the same counts with game date `2026-10-28T17:12:47.1275649Z`.
+- [x] 2.3 Classify each train as a cut or a powered train and take the symbol from the lead locomotive's tag (spec: Cut and train distinction). Verify that a test shows the `29K.xml` fixture's train with symbol `29K` and that the fixture's loco-free trains are cuts.
+- [x] 2.4 Make invalid or truncated XML return an error and never a partial snapshot. Verify with a test that feeds the reference save truncated at its midpoint.
 
 ## 3. Route profiles (`internal/profile`)
 
