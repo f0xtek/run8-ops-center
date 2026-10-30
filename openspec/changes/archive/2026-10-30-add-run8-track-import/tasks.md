@@ -50,5 +50,5 @@
   - 221 cars are placed after the import;
   - the cut's 6 sections are labelled;
   - every file in the temp install has the same hash and mtime as before.
-- [ ] 7.2 On the Run8 PC, run `run8ops.exe --save <your world>` against the real install. Verify that the installed profile was upgraded with `.v1.bak` backups and the track map kept, that the import preview lists the AGS industries, `NOR / Bowl 1`…`56` and `NOR / Receiving 1`…`14`, that confirming places the parked cars, and that no file under `C:\Run8Studios\Run8 Train Simulator V3` changes.
+- [x] 7.2 On the Run8 PC, run `run8ops.exe --save <your world>` against the real install. Verify that the installed profile was upgraded with `.v1.bak` backups and the track map kept, that the import preview lists the AGS industries, `NOR / Bowl 1`…`56` and `NOR / Receiving 1`…`14`, that confirming places the parked cars, and that no file under `C:\Run8Studios\Run8 Train Simulator V3` changes.
 - [x] 7.3 Run `go vet ./... && go test -race ./...` with and without `references/AutoLabel/` present, and run `openspec validate add-run8-track-import --strict`. Verify that all pass and that `git ls-files '*.r8' '*.ind'` prints nothing.
