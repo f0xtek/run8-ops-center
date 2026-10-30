@@ -79,7 +79,7 @@ func TestCandidatesOnWorldSaveEmptyMap(t *testing.T) {
 	}
 
 	m := New()
-	cands := m.Candidates(snap, nil)
+	cands := m.Candidates(snap, nil, nil)
 
 	// Every train that has any vehicle is a candidate, in snapshot order.
 	var wantIDs, gotIDs []string
@@ -148,7 +148,7 @@ func TestCandidatesOnWorldSaveEmptyMap(t *testing.T) {
 	for _, c := range cands {
 		m.Apply(c, Label{Kind: KindIgnored})
 	}
-	if left := m.Candidates(snap, nil); len(left) != 0 {
+	if left := m.Candidates(snap, nil, nil); len(left) != 0 {
 		t.Fatalf("%d candidates remain after labelling all", len(left))
 	}
 	if cov := m.Coverage(snap); cov.Unmapped != 0 {

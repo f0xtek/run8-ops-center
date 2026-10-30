@@ -98,7 +98,7 @@ func (e *Engine) recompute(reconcile bool) {
 
 	gen := orders.Generate(orders.GenInput{Profile: e.eff, Status: st, Active: e.orders()})
 	e.avail, e.building = gen.Orders, gen.Building
-	e.candidates = e.tm.Candidates(e.snap, e.eff)
+	e.candidates = e.tm.Candidates(e.snap, e.eff, nil) // route data is wired in task 5.1
 	e.coverage = e.tm.Coverage(e.snap)
 }
 

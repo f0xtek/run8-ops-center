@@ -139,7 +139,7 @@ func (b *vwBackend) viewLocked() *engine.View {
 	v := &engine.View{
 		Source: b.source, HasSnapshot: true, Profile: prof, Profiles: b.profiles,
 		Status: st, TrackMap: b.tm,
-		Candidates: b.tm.Candidates(b.snap, prof), Locations: b.tm.Locations(),
+		Candidates: b.tm.Candidates(b.snap, prof, nil), Locations: b.tm.Locations(),
 		Coverage: b.tm.Coverage(b.snap), Activity: append([]store.ActivityEntry(nil), b.activity...),
 		Settings: b.settings,
 	}
@@ -189,7 +189,7 @@ func (b *vwBackend) LabelCandidate(trainID string, l trackmap.Label) error {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 	b.record("label-candidate %s %s", trainID, l.Location())
-	for _, c := range b.tm.Candidates(b.snap, b.effective()) {
+	for _, c := range b.tm.Candidates(b.snap, b.effective(), nil) {
 		if c.TrainID == trainID {
 			b.tm.Apply(c, l)
 			return nil
