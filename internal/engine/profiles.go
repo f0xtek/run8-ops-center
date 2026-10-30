@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"slices"
 	"sort"
+	"strings"
 
 	"run8-ops-center/internal/profile"
 	"run8-ops-center/internal/store"
@@ -105,7 +106,8 @@ func (e *Engine) installProfile(p *profile.Profile, tm *trackmap.Map) {
 	e.guard.RegisterProfilePath(p.Dir)
 	e.base = p
 	e.tm = tm
-	e.eff = effective(p, e.settings.Thresholds)
+	e.anchorProblems = nil // the caller reloads route data for p
+	e.eff = e.effectiveProfile()
 }
 
 func (e *Engine) adoptProfile(p *profile.Profile) error {
@@ -117,12 +119,30 @@ func (e *Engine) adoptProfile(p *profile.Profile) error {
 	return nil
 }
 
-// profileWarnings adds a warning for the active profile's validation report,
-// if it has problems.
+// profileWarnings sets the warning for the active profile's validation report
+// (the profile's own problems and the anchor milepost findings), replacing an
+// earlier one whose count may be out of date.
 func (e *Engine) profileWarnings() {
-	if n := len(e.base.Report.Problems); n > 0 {
-		e.addWarning("profile", fmt.Sprintf("profile %s has %d validation problem(s); see the setup page", e.base.ID, n))
+	prefix := fmt.Sprintf("profile %s has ", e.base.ID)
+	if slices.ContainsFunc(e.warnings, func(w Warning) bool { return w.Kind == "profile" && strings.HasPrefix(w.Message, prefix) }) {
+		e.warnings = slices.DeleteFunc(slices.Clone(e.warnings), func(w Warning) bool {
+			return w.Kind == "profile" && strings.HasPrefix(w.Message, prefix)
+		})
 	}
+	if n := len(e.eff.Report.Problems); n > 0 {
+		e.addWarning("profile", fmt.Sprintf("%s%d validation problem(s); see the setup page", prefix, n))
+	}
+}
+
+// effectiveProfile returns the base profile with the threshold overrides
+// applied and the anchor milepost findings added to its report. Neither the
+// base profile nor its report is modified.
+func (e *Engine) effectiveProfile() *profile.Profile {
+	p := effective(e.base, e.settings.Thresholds)
+	if len(e.anchorProblems) > 0 {
+		p.Report.Problems = append(slices.Clone(e.base.Report.Problems), e.anchorProblems...)
+	}
+	return p
 }
 
 // effective returns a copy of base with the per-train threshold overrides

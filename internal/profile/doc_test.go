@@ -131,7 +131,7 @@ func TestDocumentedFieldsMatchSchema(t *testing.T) {
 
 func TestDocumentedProblemCodesMatchValidator(t *testing.T) {
 	got := docPaths(docSection(t, readDoc(t), "Validation report"))
-	want := []string{CodeOrphanTag, CodeMalformedTag, CodeUnservedIndustry, CodeUnknownRef, CodeDuplicateTag, CodeUnmappedCarType, CodeUnmatchedModel}
+	want := []string{CodeOrphanTag, CodeMalformedTag, CodeUnservedIndustry, CodeUnknownRef, CodeDuplicateTag, CodeUnmappedCarType, CodeUnmatchedModel, CodeInvalidRun8, CodeUnmatchedAnchor}
 	sort.Strings(got)
 	sort.Strings(want)
 	if !reflect.DeepEqual(got, want) {

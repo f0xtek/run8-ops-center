@@ -137,7 +137,7 @@ func TestBulkLabelSuggestionBRI(t *testing.T) {
 	}
 	snap := &run8save.Snapshot{Trains: []run8save.Train{{ID: "cut1", Vehicles: cars}}}
 	m := New()
-	cs := m.Candidates(snap, testProfile())
+	cs := m.Candidates(snap, testProfile(), nil)
 	if len(cs) != 1 {
 		t.Fatalf("got %d candidates", len(cs))
 	}
@@ -170,7 +170,7 @@ func TestBulkLabelSuggestionBRI(t *testing.T) {
 			t.Fatalf("section %v label = %+v, %v", s, l, ok)
 		}
 	}
-	if left := m.Candidates(snap, testProfile()); len(left) != 0 {
+	if left := m.Candidates(snap, testProfile(), nil); len(left) != 0 {
 		t.Fatalf("cut still a candidate: %+v", left)
 	}
 	if cov := m.Coverage(snap); cov != (Coverage{Cars: 19}) {
@@ -201,7 +201,7 @@ func TestTagSuggestionRules(t *testing.T) {
 		{"blank", []string{""}, ""},
 	}
 	for _, tc := range cases {
-		c := m.Candidates(cut(tc.tags...), p)[0]
+		c := m.Candidates(cut(tc.tags...), p, nil)[0]
 		got := ""
 		if c.Suggestion != nil {
 			got = c.Suggestion.Label.Industries[0]
@@ -211,43 +211,39 @@ func TestTagSuggestionRules(t *testing.T) {
 		}
 	}
 	// Nil profile disables tag suggestions without panicking.
-	if c := m.Candidates(cut("A39 GES"), nil)[0]; c.Suggestion != nil {
+	if c := m.Candidates(cut("A39 GES"), nil, nil)[0]; c.Suggestion != nil {
 		t.Errorf("nil profile gave %+v", c.Suggestion)
 	}
 }
 
-func TestNeighbourSuggestion(t *testing.T) {
+// Without route data nothing is guessed from section numbers: a labelled
+// section whose index differs by one is not a neighbour.
+func TestNoIndexGuessing(t *testing.T) {
 	m := New()
 	norris := Label{Kind: KindYard, Yard: "NOR", Track: "Bowl 14"}
 	m.Set(280, 5100, norris)
+	m.Set(280, 6000, Label{Kind: KindIndustry, Industries: []string{"GES"}})
 	snap := &run8save.Snapshot{Trains: []run8save.Train{
 		{ID: "next", Vehicles: []run8save.Vehicle{car("1", "A39 GES", 5101, 5101), car("2", "BRI BRI", 5101, 5102)}},
-		{ID: "far", Vehicles: []run8save.Vehicle{car("3", "", 6000, 6000)}},
+		{ID: "tagged", Vehicles: []run8save.Vehicle{car("3", "A39 GES", 6001, 6001)}},
+		{ID: "far", Vehicles: []run8save.Vehicle{car("4", "", 7000, 7000)}},
 	}}
-	cs := m.Candidates(snap, testProfile())
-	if len(cs) != 2 {
+	cs := m.Candidates(snap, testProfile(), nil)
+	if len(cs) != 3 {
 		t.Fatalf("candidates = %+v", cs)
 	}
-	s := cs[0].Suggestion
-	if s == nil || s.Source != SourceNeighbour || !reflect.DeepEqual(s.Label, norris) {
-		t.Fatalf("neighbour suggestion = %+v", s)
+	for _, c := range cs {
+		if c.Suggestion != nil {
+			t.Errorf("%s: suggestion %+v", c.TrainID, c.Suggestion)
+		}
+		if !reflect.DeepEqual(c.Track, c.Sections) {
+			t.Errorf("%s: track %v, sections %v", c.TrainID, c.Track, c.Sections)
+		}
 	}
-	if !containsAll(s.Reason, "hint", "280/5101", "280/5100", "NOR / Bowl 14") {
-		t.Fatalf("reason = %q", s.Reason)
-	}
-	if cs[1].Suggestion != nil {
-		t.Fatalf("far cut got suggestion %+v", cs[1].Suggestion)
-	}
-	// A different prefix at index +/-1 is not a neighbour.
-	other := New()
-	other.Set(281, 6001, norris)
-	if c := other.Candidates(snap, nil); c[1].Suggestion != nil {
-		t.Fatalf("cross-prefix suggestion: %+v", c[1].Suggestion)
-	}
-	// Tag suggestion outranks the hint when every car is tagged.
-	tagged := &run8save.Snapshot{Trains: []run8save.Train{{ID: "t", Vehicles: []run8save.Vehicle{car("1", "A39 GES", 5101, 5101)}}}}
-	if c := m.Candidates(tagged, testProfile())[0]; c.Suggestion.Source != SourceTags {
-		t.Fatalf("source = %q", c.Suggestion.Source)
+	// An industry with no labelled section still gets its tag suggestion.
+	tagged := &run8save.Snapshot{Trains: []run8save.Train{{ID: "t", Vehicles: []run8save.Vehicle{car("1", "BRI BRI", 5101, 5101)}}}}
+	if c := m.Candidates(tagged, testProfile(), nil)[0]; c.Suggestion == nil || c.Suggestion.Source != SourceTags {
+		t.Fatalf("suggestion = %+v", c.Suggestion)
 	}
 }
 
@@ -270,7 +266,7 @@ func TestCandidatesMappedIgnoredAndPowered(t *testing.T) {
 		{ID: "straddle", Vehicles: []run8save.Vehicle{car("3", "", 2, 9), loco("L1", "BRR", 9)}},
 		{ID: "empty"},
 	}}
-	cs := m.Candidates(snap, testProfile())
+	cs := m.Candidates(snap, testProfile(), nil)
 	if len(cs) != 1 || cs[0].TrainID != "straddle" {
 		t.Fatalf("candidates = %+v", cs)
 	}
@@ -286,7 +282,7 @@ func TestCandidatesMappedIgnoredAndPowered(t *testing.T) {
 func TestApplySkipsSectionsLabelledSince(t *testing.T) {
 	m := New()
 	snap := &run8save.Snapshot{Trains: []run8save.Train{{ID: "c", Vehicles: []run8save.Vehicle{car("1", "", 10, 11)}}}}
-	c := m.Candidates(snap, nil)[0]
+	c := m.Candidates(snap, nil, nil)[0]
 	m.Set(280, 11, Label{Kind: KindIgnored})
 	m.Apply(c, Label{Kind: KindYard, Yard: "NOR", Track: "Bowl 1"})
 	if l, _ := m.Lookup(280, 10); l.Kind != KindYard {

@@ -221,6 +221,7 @@ func TestActiveTab(t *testing.T) {
 	for p, want := range map[string]string{
 		"/": "dashboard", "/orders": "orders", "/orders/ab10/start": "orders", "/ordersx": "",
 		"/yards": "yards", "/learn": "learn", "/setup": "setup", "/activity": "activity", "/nope": "",
+		"/trackmap/import/preview": "learn", "/trackmap/label": "learn", "/trackmapx": "",
 	} {
 		if got := activeTab(p); got != want {
 			t.Errorf("activeTab(%q) = %q, want %q", p, got, want)

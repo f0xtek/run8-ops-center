@@ -3,3 +3,6 @@ examples/
 notes.txt
 .DS_Store
 dist/
+# Run8 binary data files belong to the closed-source Run8 software: never commit them.
+*.r8
+*.ind

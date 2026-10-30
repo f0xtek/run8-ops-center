@@ -1,6 +1,7 @@
 package web
 
 import (
+	"errors"
 	"fmt"
 	"html"
 	"net/http"
@@ -17,6 +18,8 @@ import (
 	"run8-ops-center/internal/engine"
 	"run8-ops-center/internal/orders"
 	"run8-ops-center/internal/profile"
+	"run8-ops-center/internal/run8route"
+	"run8-ops-center/internal/run8route/run8routetest"
 	"run8-ops-center/internal/run8save"
 	"run8-ops-center/internal/store"
 	"run8-ops-center/internal/trackmap"
@@ -36,6 +39,7 @@ type vwBackend struct {
 	activity []store.ActivityEntry
 	source   engine.Source
 	guard    *store.Guard // answers SetInstallDir with the real protected-path rules
+	imp      *vwImporter  // the synthetic Run8 install behind the import, nil when there is none
 	dataDir  string
 	subs     map[chan struct{}]struct{}
 
@@ -135,13 +139,20 @@ func (b *vwBackend) View() *engine.View {
 
 func (b *vwBackend) viewLocked() *engine.View {
 	prof := b.effective()
+	var data *run8route.Data
+	if b.imp != nil {
+		data = b.imp.data()
+	}
 	st, _ := carstatus.Derive(b.snap, prof, b.tm, nil)
 	v := &engine.View{
 		Source: b.source, HasSnapshot: true, Profile: prof, Profiles: b.profiles,
 		Status: st, TrackMap: b.tm,
-		Candidates: b.tm.Candidates(b.snap, prof), Locations: b.tm.Locations(),
+		Candidates: b.tm.Candidates(b.snap, prof, data), Locations: b.tm.Locations(),
 		Coverage: b.tm.Coverage(b.snap), Activity: append([]store.ActivityEntry(nil), b.activity...),
 		Settings: b.settings,
+	}
+	if b.imp != nil {
+		v.Run8 = b.imp.state(b.tm)
 	}
 	v.Tiles.Unmapped = st.Unmapped
 	return v
@@ -189,7 +200,11 @@ func (b *vwBackend) LabelCandidate(trainID string, l trackmap.Label) error {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 	b.record("label-candidate %s %s", trainID, l.Location())
-	for _, c := range b.tm.Candidates(b.snap, b.effective()) {
+	var data *run8route.Data
+	if b.imp != nil {
+		data = b.imp.data()
+	}
+	for _, c := range b.tm.Candidates(b.snap, b.effective(), data) {
 		if c.TrainID == trainID {
 			b.tm.Apply(c, l)
 			return nil
@@ -278,6 +293,38 @@ func (b *vwBackend) SwitchProfile(id string) error {
 	}
 	b.settings.ProfileID = id
 	return nil
+}
+
+func (b *vwBackend) PreviewImport() (engine.ImportPreview, error) {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	b.record("import-preview")
+	if b.imp == nil {
+		return engine.ImportPreview{}, errors.New("profile names no Run8 folders")
+	}
+	return b.imp.preview(b.tm)
+}
+
+func (b *vwBackend) ConfirmImport(token string) error {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	b.record("import-confirm")
+	if b.imp == nil {
+		return errors.New("profile names no Run8 folders")
+	}
+	return b.imp.confirm(b.tm, token)
+}
+
+// useInstall points the fake at a synthetic Run8 install written from spec and
+// shows the world snapshot snap, so cars sit on the synthetic route's sections.
+func (b *vwBackend) useInstall(t *testing.T, spec run8routetest.InstallSpec, snap *run8save.Snapshot) {
+	t.Helper()
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	b.imp = vwNewImporter(t, b.base, spec)
+	if snap != nil {
+		b.snap = snap
+	}
 }
 
 // vwServer builds a server with the four views registered against b.

@@ -136,13 +136,20 @@
         });
       }
       /* A redirect moves the page: res.url is where fetch ended up. A direct answer
-         to the POST leaves the user where they are. */
+         to the POST leaves the user where they are, unless the server names the page
+         the answer belongs to in X-Navigate (the import confirm answers a form that
+         sits on the preview page with the learn page). */
       var settled = new URL(res.url, location.href);
       settled.searchParams.delete("fragment");
       var target = settled.pathname + settled.search + settled.hash;
       var title = headerText(res, "X-Page-Title");
+      var navigate = headerText(res, "X-Navigate");
+      if (navigate.charAt(0) !== "/" || navigate.charAt(1) === "/") { navigate = ""; }
       return res.text().then(function (html) {
-        if (res.redirected && settled.pathname + settled.search !== location.pathname + location.search) {
+        if (navigate && navigate !== location.pathname + location.search) {
+          history.pushState(null, "", navigate);
+          if (title) { document.title = title; }
+        } else if (res.redirected && settled.pathname + settled.search !== location.pathname + location.search) {
           history.pushState(null, "", target);
         }
         if (title && res.redirected) { document.title = title; }

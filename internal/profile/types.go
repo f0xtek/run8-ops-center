@@ -4,6 +4,7 @@ package profile
 
 import (
 	"os"
+	"regexp"
 	"strings"
 )
 
@@ -18,6 +19,47 @@ const Unknown CarType = "Unknown"
 type Yard struct {
 	Code string // "NOR"
 	Name string // "Norris"
+	// AnchorMileposts are Run8 milepost station names, whitespace
+	// normalised, that mark where the yard is.
+	AnchorMileposts []string
+	// AnchorIndustries are tags of profile industries that mark where the
+	// yard is.
+	AnchorIndustries []string
+}
+
+// BundledSchemaVersion is the profile.yaml schemaVersion of the profile
+// embedded in this binary. Load refuses a profile with a newer version.
+const BundledSchemaVersion = 2
+
+// Run8Route is a Run8 route folder and the track section prefix it covers.
+type Run8Route struct {
+	Folder string // single folder name under Content\V3Routes
+	Prefix int    // member of Profile.RoutePrefixes
+}
+
+// Run8Hump maps a Run8 hump controller name to a yard and a track name prefix.
+type Run8Hump struct {
+	Controller  string
+	Yard        string // yard code
+	TrackPrefix string // "Bowl"
+}
+
+// Run8TrackEnds maps special locations whose name matches Pattern to a yard
+// and a track name prefix. Pattern has the named groups n (track number) and
+// end (which end of the track).
+type Run8TrackEnds struct {
+	Pattern     *regexp.Regexp
+	Yard        string // yard code
+	TrackPrefix string // "Receiving"
+}
+
+// Run8Config names the Run8 route data a profile reads. Entries that failed
+// validation are already dropped and are listed in Profile.Report.
+type Run8Config struct {
+	Region    string // single folder name under Content\V3Routes\Regions
+	Routes    []Run8Route
+	Humps     []Run8Hump
+	TrackEnds []Run8TrackEnds
 }
 
 // IndustryCar is one car-type row of an industry (CSV continuation rows
@@ -145,6 +187,8 @@ type Profile struct {
 	Aliases            map[string]string // outgoing tag -> class code
 	YardInternalTags   []string          // "NOR", "NOR Hump", ...
 	RoutePrefixes      []int
+	SchemaVersion      int         // profile.yaml schemaVersion; 1 when absent
+	Run8               *Run8Config // nil when profile.yaml has no run8 block or its region is invalid
 	Report             Report
 }
 
@@ -160,7 +204,7 @@ type FileWriter interface {
 //	func LoadIndustryCSV(r io.Reader) ([]Industry, error)
 //	func LoadLimits(r io.Reader) (map[string]Limit, map[string][]string, error) // by base symbol; class codes by base symbol
 //	func Load(dir string) (*Profile, error)                                      // reads profile.yaml, CSV, TSV from dir
-//	func InstallBundled(w FileWriter, profilesDir string) error                  // installs ags-south-p1 when absent
+//	func InstallBundled(w FileWriter, profilesDir string) error                  // installs ags-south-p1, or upgrades an older installed copy
 
 // NormTag trims a tag and collapses internal whitespace.
 func NormTag(s string) string { return strings.Join(strings.Fields(s), " ") }

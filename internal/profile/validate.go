@@ -15,6 +15,8 @@ const (
 	CodeDuplicateTag     = "duplicate-tag"
 	CodeUnmatchedModel   = "unmatched-model"
 	CodeUnmappedCarType  = "unmapped-car-type"
+	CodeInvalidRun8      = "invalid-run8"
+	CodeUnmatchedAnchor  = "unmatched-anchor"
 	stopKindYard         = "yard"
 	stopKindIndustry     = "industry"
 )
@@ -28,6 +30,7 @@ func validate(p *Profile, rows []limitRow) Report {
 	v.malformedAndOrphanTags(rows)
 	v.unservedIndustries()
 	v.unmappedCarTypes()
+	v.anchorIndustries()
 	return Report{Problems: v.out}
 }
 

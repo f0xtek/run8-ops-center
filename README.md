@@ -20,7 +20,7 @@ To build the Windows binary from macOS or Linux:
 GOOS=windows GOARCH=amd64 go build -o run8ops.exe ./cmd/run8ops
 ```
 
-The binary has no other files to install. The AGS profile is built in and is copied to the data folder on the first run.
+The binary has no other files to install. The AGS profile is built in. The app copies it to the data folder on the first run and upgrades it when a newer version ships (see [Profile upgrade](#profile-upgrade)).
 
 `run8ops.exe --version` prints the version. A build made with plain `go build` reports `dev`. Release builds report the release version.
 
@@ -54,14 +54,35 @@ The app waits until a file stops changing before it reads it, so it never reads 
 
 ## First run
 
-At first start the app does not know where any car is. A world save records track section numbers and nothing else, so you tell the app which sections are yard tracks and which are industry tracks. This is learn mode.
+At first start the app does not know where any car is. A world save records track section numbers and nothing else. Run8 keeps the industry tracks, the hump bowl and the receiving tracks in its route files, so the app reads those and labels them for you. You label what is left in learn mode.
 
-1. Open the Learn mode page. It lists every cut and train that sits on an unlabelled section, with its cars, its destination tags and the sections it occupies.
+### Import the track labels from Run8
+
+1. Open the Learn mode page and find the Import from Run8 card. The app reads the route files from the Run8 install folder, which is `C:\Run8Studios\Run8 Train Simulator V3` unless you choose another folder in Setup. The card says whether the files could be read and names any file it could not use, with the reason.
+2. Press Preview the import. The preview changes nothing. It counts the new labels, the changed labels, the removed labels, the sections that keep a label you made by hand, and the skipped items, with a reason for each skipped item. It lists the locations one by one, and you open a location to see its sections.
+3. Press Confirm the import to save the labels, or Cancel to leave the track map as it was. If a Run8 file or a label changed after you opened the preview, the app refuses to confirm and asks you to review a new preview.
+
+For AGS the import labels the industry tracks from `Config.ind`, the Norris hump bowl tracks `NOR / Bowl 1` to `NOR / Bowl 56`, and the Norris receiving tracks `NOR / Receiving 1` to `NOR / Receiving 14`. The Labelled sections list marks each imported section with an "imported" tag. An import never changes a label you made by hand. If you relabel an imported section, it becomes a manual label and later imports leave it alone.
+
+The dashboard attention list tells you when an import is available, when the Run8 track data changed since your last import, and when a route file could not be used. Each item links to the import card. After a Run8 update or a swap of the industry file, preview a new import to pick up the changes.
+
+### Label what is left
+
+1. The Learn mode page lists every cut and train that sits on an unlabelled section, with its cars, its destination tags and the sections it occupies.
 2. Label a cut as a yard track (pick the yard and give the track a name), an industry track (pick the industries), or ignored (mainline and other track that is not a location).
-3. When every car in a cut is tagged for the same industry, the page offers that industry as a hint. The app never applies a hint until you accept it.
-4. The unmapped count on the dashboard drops as you go. Cars on unlabelled track stay out of orders.
+3. When the route data is available, one label covers the whole track the cut stands on, not only the sections under its cars. The list shows the other unmapped sections of that track before you apply the label. The Apply to choice labels a single section instead.
+4. The page offers a hint when it can guess a label. It never applies a hint until you accept it. It tries these in order.
+   - The industry that all the cars in the cut are tagged for, when that industry has no labelled section yet or has one next to the cut's track.
+   - The label of a section the cut's track joins, directly or across one switch. An industry label is offered as it is. For a yard label the app offers the yard only.
+   - The yard whose anchor, a milepost or an industry named in the profile, is nearest to the cut and within 3 km.
+5. A hint that names a yard and no track gets no accept button. The app fills the yard into the label form and opens it, and you type the track name.
+6. The unmapped count on the dashboard drops as you go. Cars on unlabelled track stay out of orders.
 
 The labels live in the profile folder and survive restarts. You only label a track once.
+
+### Profile upgrade
+
+The import needs the version 2 AGS profile, which adds the Run8 folders, the hump and receiving-track rules and the yard anchors. When a newer bundled profile ships, the app upgrades the installed one at the next start. For each of `IndustryConfiguration.csv`, `train_limits.tsv` and `profile.yaml`, it saves the installed file as `<name>.v<old>.bak` and then writes the bundled file. An installed profile with the same or a newer version is left alone. The app never touches `trackmap.json`, so your labels stay. If you edited one of the three files, copy your changes back from the `.bak` copy by hand. To go back to the old profile, restore the `.bak` files.
 
 ## Orders
 

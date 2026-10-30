@@ -10,6 +10,7 @@ import (
 	"run8-ops-center/internal/carstatus"
 	"run8-ops-center/internal/orders"
 	"run8-ops-center/internal/profile"
+	"run8-ops-center/internal/run8route"
 	"run8-ops-center/internal/store"
 	"run8-ops-center/internal/trackmap"
 )
@@ -30,6 +31,47 @@ type Warning struct {
 	Time    time.Time
 	Kind    string // "ingest", "autosave", "parse", "profile", "settings"
 	Message string
+}
+
+// Run8Status values of Run8State.Status.
+const (
+	Run8Ready       = "ready"       // every Run8 route file was read
+	Run8Partial     = "partial"     // some files were read and some were not
+	Run8Unavailable = "unavailable" // no route data: see Run8State.Reason
+)
+
+// Run8State describes the Run8 route data the engine holds and how it stands
+// against the last import. It is refreshed on every ingest by statting the
+// files, without decoding them.
+type Run8State struct {
+	// Status is Run8Ready, Run8Partial or Run8Unavailable.
+	Status string
+	// Reason says why Status is Run8Unavailable ("profile names no Run8
+	// folders", or that no file could be read); empty otherwise.
+	Reason string
+	// Unavailable lists the files that could not be used, with path and error.
+	Unavailable []run8route.FileStatus
+	// LastImport is the time of the last import, zero when none was made.
+	LastImport time.Time
+	// Changed is true when an import was made and the route files differ from
+	// the ones it was built from.
+	Changed bool
+	// ImportAvailable is true when route data is readable and no import has
+	// ever been made for this profile.
+	ImportAvailable bool
+	// HasRun8Config is true when the profile names Run8 region and route folders.
+	HasRun8Config bool
+}
+
+// ImportPreview is what PreviewImport returns: the diff an import would
+// apply, the route files that could not be used, and the token that
+// ConfirmImport needs.
+type ImportPreview struct {
+	Diff     trackmap.ImportDiff
+	Unusable []run8route.FileStatus
+	// Token identifies the route files and the track map revision the diff was
+	// built from. ConfirmImport refuses a token that no longer matches.
+	Token string
 }
 
 // Tiles are the dashboard summary counts.
@@ -71,6 +113,8 @@ type View struct {
 	Tiles    Tiles
 	Warnings []Warning // newest first
 
+	Run8 Run8State
+
 	TrackMap   *trackmap.Map
 	Candidates []trackmap.Candidate     // learn mode: unmapped cuts and trains with suggestions
 	Locations  []trackmap.LocationGroup // labelled sections grouped by location
@@ -104,6 +148,13 @@ type Backend interface {
 	// RenameLocation relabels every section of old as new; returns the count.
 	RenameLocation(old, new trackmap.Location) (int, error)
 
+	// PreviewImport re-reads the Run8 route files and returns what an import
+	// would change, without changing anything.
+	PreviewImport() (ImportPreview, error)
+	// ConfirmImport applies the import a preview described. It returns
+	// ErrStaleImport when the route files or the track map changed since.
+	ConfirmImport(token string) error
+
 	// Settings commands. All are persisted; thresholds and the profile apply
 	// immediately, port/bind changes need a restart.
 	SetThreshold(symbol string, minLengthPct, maxCarAgeDays *float64) error // nil pointer clears that override
@@ -125,7 +176,7 @@ type Config struct {
 
 // API implemented in this package (tasks 8.3, 8.4, 9.2):
 //
-//	func New(cfg Config) (*Engine, error)           // installs the bundled profile on first run, loads settings/state/trackmap
+//	func New(cfg Config) (*Engine, error)           // installs or upgrades the bundled profile, loads settings/state/trackmap and the Run8 route data
 //	func (e *Engine) Run(ctx context.Context) error // the single-writer loop; returns when ctx ends
 //	func (e *Engine) Ingest(ev watch.Event)         // called from the watcher goroutine; queued, never blocks the caller for long
 //	// plus every Backend method.

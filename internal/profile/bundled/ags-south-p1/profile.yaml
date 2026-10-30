@@ -2,7 +2,10 @@
 #
 # The operating scheme follows the AGS NS Birmingham Guide. Industries come from
 # IndustryConfiguration.csv and train limits from train_limits.tsv, both in this
-# folder. Edit this file freely: the app never overwrites an installed profile.
+# folder. Edit this file freely. When a new version of the app ships a newer
+# schemaVersion, it replaces this file and keeps your old copy as
+# profile.yaml.v<old>.bak.
+schemaVersion: 2
 id: ags-south-p1
 name: AGS South Phase 1 (NS Birmingham)
 
@@ -11,11 +14,17 @@ defaultSaveDir: 'C:\Run8Studios\Run8 Train Simulator V3\Content\V3Routes\Regions
 defaultAutoSaveDir: 'C:\Run8Studios\Run8 Train Simulator V3\Content\V3Routes\Regions\GulfCoast\AutoSaves'
 
 yards:
-  - {code: NOR, name: Norris}
-  - {code: TUS, name: Tuscaloosa}
-  - {code: MCC, name: McCalla}
-  - {code: BES, name: Bessemer}
-  - {code: 32ND, name: 32nd Street}
+  - code: NOR
+    name: Norris
+    anchorMileposts: [Receiving Yard, West Forwarding Yard, East Forwarding Yard]
+  - {code: TUS, name: Tuscaloosa, anchorMileposts: [Tuscaloosa MP 199.1]}
+  - {code: MCC, name: McCalla, anchorIndustries: [BRI]}
+  - {code: BES, name: Bessemer, anchorIndustries: [BRL]}
+  - {code: 32ND, name: 32nd Street, anchorMileposts: [32nd St Yard]}
+
+# Anchors place a yard on the map when a cut sits outside every labelled track.
+# A milepost anchor is a Run8 milepost station name. An industry anchor is an
+# industry tag. A name that matches nothing shows up in the profile report.
 
 # Local jobs. Limits come from the row of train_limits.tsv with the same symbol.
 # A job with no row (A37, A56, A39, BRI, CSXB) has no limit until you add a
@@ -191,3 +200,21 @@ yardInternalTags: [NOR, NOR Hump, NOR Trim W, NOR Trim E]
 
 # Track section prefixes belonging to this route.
 routePrefixes: [280]
+
+# Run8 route data the app can import track labels from. The region and route
+# folders sit under the Run8 install folder: Content\V3Routes\Regions\<region>
+# and Content\V3Routes\<folder>. prefix is the track section prefix the route
+# covers, and it must appear in routePrefixes.
+run8:
+  region: GulfCoast
+  routes:
+    - {folder: NS_AGS_Phase01, prefix: 280}
+  # Hump controllers whose bowl tracks become "<yard> / <trackPrefix> <track name>".
+  humps:
+    - {controller: Norris Yard Hump Controller, yard: NOR, trackPrefix: Bowl}
+  # Special-location names that mark the two ends of a numbered track. The
+  # pattern needs the named groups n (track number) and end (North or South).
+  trackEnds:
+    - pattern: '(?i)^Norris RCV (?P<n>\d+) (?P<end>North|South) end$'
+      yard: NOR
+      trackPrefix: Receiving

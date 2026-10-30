@@ -42,7 +42,8 @@ func sortSections(s []SectionRef) {
 }
 
 // Load reads trackmap.json. A missing file yields an empty map. Malformed
-// JSON, a bad section key or an unknown label kind is an error.
+// JSON, a bad section key, an unknown label kind or an unknown label source
+// is an error. A label without a source is manual.
 func Load(path string) (*Map, error) {
 	data, err := os.ReadFile(path)
 	if errors.Is(err, fs.ErrNotExist) {
@@ -67,6 +68,11 @@ func Load(path string) (*Map, error) {
 		default:
 			return nil, fmt.Errorf("track map %s: section %s has unknown kind %q", path, k, l.Kind)
 		}
+		switch l.Source {
+		case "", SourceRun8:
+		default:
+			return nil, fmt.Errorf("track map %s: section %s has unknown source %q", path, k, l.Source)
+		}
 	}
 	return m, nil
 }
@@ -78,7 +84,11 @@ func (m *Map) Save(w FileWriter, path string) error {
 	if m != nil && m.Labels != nil {
 		labels = m.Labels
 	}
-	data, err := json.MarshalIndent(Map{Labels: labels}, "", "  ")
+	var meta *ImportMeta
+	if m != nil {
+		meta = m.Run8Import
+	}
+	data, err := json.MarshalIndent(Map{Labels: labels, Run8Import: meta}, "", "  ")
 	if err != nil {
 		return fmt.Errorf("encode track map: %w", err)
 	}
@@ -101,12 +111,20 @@ func cloneLabel(l Label) Label {
 	return l
 }
 
-// Set labels a section, replacing any existing label.
+// Set labels a section, replacing any existing label. The label is stored as
+// a manual label whatever l.Source says, because Set is the path user
+// commands take. Imports go through ApplyImport.
 func (m *Map) Set(prefix, section int, l Label) {
+	l.Source = ""
+	m.put(Key(prefix, section), l)
+}
+
+// put stores a label under key, keeping its source.
+func (m *Map) put(key string, l Label) {
 	if m.Labels == nil {
 		m.Labels = map[string]Label{}
 	}
-	m.Labels[Key(prefix, section)] = cloneLabel(l)
+	m.Labels[key] = cloneLabel(l)
 }
 
 // Remove deletes a section's label, making it unmapped again.
@@ -118,11 +136,20 @@ func (m *Map) Remove(prefix, section int) {
 // the ignored group. It shares Label's fields; Key gives it identity.
 type Location Label
 
-// Location returns the location a label names.
-func (l Label) Location() Location { return Location(cloneLabel(l)) }
+// Location returns the location a label names. The location has no source:
+// where a label came from is not part of where it puts a section.
+func (l Label) Location() Location {
+	l.Source = ""
+	return Location(cloneLabel(l))
+}
 
-// Label returns the label that places a section at the location.
-func (l Location) Label() Label { return cloneLabel(Label(l)) }
+// Label returns the label that places a section at the location. It is a
+// manual label, so renaming or relabelling a location makes the labels
+// manual.
+func (l Location) Label() Label {
+	l.Source = ""
+	return cloneLabel(Label(l))
+}
 
 // Key is a stable identity for the location. Industry tag order does not
 // matter.
