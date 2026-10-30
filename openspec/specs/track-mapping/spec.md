@@ -22,7 +22,7 @@ A section with no label SHALL be treated as unmapped.
 - **THEN** the car's location is reported as unmapped, with its section index
 
 ### Requirement: Learn from occupied track
-Learn mode SHALL list every cut and train in the current snapshot that occupies at least one unmapped section. Each entry SHALL show its sections, car count, a sample of car numbers and its destination tags. The user SHALL be able to apply one label to all unmapped sections an entry occupies in a single action. When the track database is available, that action SHALL also label every unmapped section of the switch-bounded tracks the entry stands on, and the entry SHALL show which sections it will label.
+Learn mode SHALL list every cut and train in the current snapshot that occupies at least one unmapped section. Each entry SHALL show its sections, car count, a sample of car numbers and its destination tags. The user SHALL be able to apply one label to all unmapped sections an entry occupies in a single action. With the track database available, that action SHALL also label the unmapped sections of the switch-bounded tracks the entry stands on, and the entry SHALL list them.
 
 #### Scenario: Labelling a parked cut
 - **WHEN** a 12-car cut on unmapped sections 5101 to 5103 is shown and the user labels it as yard track `Norris / Bowl 14`

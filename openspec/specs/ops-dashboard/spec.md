@@ -29,7 +29,7 @@ The dashboard SHALL show:
 - In Progress and Completion Detected orders;
 - Available orders grouped by kind;
 - each road train's build percentage toward its threshold;
-- an attention list of ingest warnings, profile validation problems, unknown-tag or unmapped cars, Run8 route data files that could not be used, and the Run8 track data notice (changed since the last import, or an import available).
+- an attention list of ingest warnings, profile validation problems, unknown-tag or unmapped cars, unusable Run8 route files, and the Run8 track data notice.
 
 #### Scenario: Attention items
 - **WHEN** 12 cars are on unmapped sections and the profile reports an orphan tag
