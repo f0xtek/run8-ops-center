@@ -22,6 +22,8 @@ GOOS=windows GOARCH=amd64 go build -o run8ops.exe ./cmd/run8ops
 
 The binary has no other files to install. The AGS profile is built in and is copied to the data folder on the first run.
 
+`run8ops.exe --version` prints the version. A build made with plain `go build` reports `dev`. Release builds report the release version.
+
 ## Run
 
 ```
@@ -40,6 +42,7 @@ On start the app prints the address of the web page and opens it in your browser
 | `--data <dir>` | Where the app keeps its own files. The default is `%APPDATA%\Run8OpsCenter`. |
 | `--port <n>` | The web server port for this run. The saved setting is 8080 until you change it in Setup. |
 | `--no-browser` | Do not open the browser on start. |
+| `--version` | Print the version and exit. |
 
 ### Saves and auto-saves
 
@@ -92,12 +95,43 @@ The app keeps these files in the data folder.
 
 The app never creates, changes, renames or deletes a file under `C:\Run8Studios\Run8 Train Simulator V3`. It refuses to start with a `--data` folder inside that directory, and it checks every write against the same rule, including paths that reach the install folder through a symbolic link.
 
+## Releases
+
+Every merge to `main` that holds a fix, a feature or a breaking change publishes a release on the GitHub releases page. A release has three things:
+
+- `run8ops_v<version>_windows_amd64.zip`, which holds `run8ops.exe` and this README.
+- A `.sha256` file with the checksum of the zip.
+- Notes that list the changes since the last release, with breaking changes first.
+
+To check a download, put the zip and the `.sha256` file in one folder and run `shasum -a 256 -c run8ops_v0.1.0_windows_amd64.zip.sha256`. On Windows, run `Get-FileHash` on the zip in PowerShell and compare the hash with the one in the `.sha256` file.
+
+### How the version is chosen
+
+Commit messages follow [Conventional Commits](https://www.conventionalcommits.org/). On each merge to `main`, the release job reads every commit since the last `v<major>.<minor>.<patch>` tag and applies the biggest change it finds.
+
+| Commit | Before 1.0 | From 1.0 |
+|---|---|---|
+| Breaking: `!` after the type, or a body line that starts with `BREAKING CHANGE:` | minor | major |
+| `feat` | minor | minor |
+| `fix`, `perf`, `revert` | patch | patch |
+| `docs`, `test`, `build`, `ci`, `chore`, `style`, `refactor` | no release | no release |
+
+The first release is 0.1.0. A merge that holds only commits from the last row publishes nothing. The project stays below 1.0 until you push the tag `v1.0.0` yourself. That tag has no download of its own, and the next release after it uses the "From 1.0" column.
+
+### Pull request titles
+
+The repository uses squash merges, so the pull request title becomes the commit message on `main` and decides the version. A check on every pull request rejects a title that is not `type(scope)!: description`, where the scope and the `!` are optional and the type is one of `feat`, `fix`, `perf`, `refactor`, `docs`, `test`, `build`, `ci`, `chore`, `style` or `revert`. For example, `feat(web): add order filters` or `fix(engine)!: change the snapshot format`.
+
 ## Development
 
 ```
 go vet ./...
-go test ./...
+go test -race ./...
+bash .github/scripts/next-version_test.sh
+bash .github/scripts/check-title_test.sh
 ```
+
+The last two commands test the release scripts in `.github/scripts/`. CI runs the Go checks on Linux and Windows and the script tests on Linux. It does this for each push to a branch with no open pull request and for each pull request into `main`.
 
 The tests use copies of Run8 saves in `testdata/`. The app itself never reads from `testdata/`.
 

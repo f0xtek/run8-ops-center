@@ -41,6 +41,15 @@ A Go app that follows a Run8 Train Simulator V3 world save and generates freight
 - Auto-saves have no `<description>` element.
 - A save has no car type, length, reporting mark, speed or track name. Car type comes from the model file name. A train's symbol comes from the lead locomotive's `destinationTag`.
 
+## CI and releases
+
+- Workflows are in `.github/workflows/`: `ci.yml` (branches and pull requests), `release.yml` (push to `main`) and `tests.yml` (the shared test job, run on Linux and Windows). Both must pass on both systems.
+- CI runs once per push. A branch with an open pull request into `main` is tested by the pull request run, and the branch push run skips its jobs. This is the `gate` job in `ci.yml`.
+- `.github/scripts/` holds `next-version.sh`, `check-title.sh`, their shared grammar `conventional.sh`, and a test for each script. Run the tests with `bash .github/scripts/<name>_test.sh`.
+- Every push to `main` that holds a releasable commit publishes a GitHub release. The first release is `v0.1.0`. Before 1.0 a breaking change and a `feat` raise the minor number, and a `fix`, `perf` or `revert` raises the patch number. From 1.0 a breaking change raises the major number. Commits that are only `docs`, `ci`, `chore`, `build`, `test`, `style` or `refactor` publish nothing.
+- The repository uses squash merges, so the pull request title becomes the commit subject on `main` and must be a Conventional Commit. `check-title.sh` enforces this on pull requests.
+- The release build stamps the version with `-ldflags "-X main.version=<version>"`. A plain `go build` reports `dev`.
+
 ## Working conventions
 
 - Commit messages follow Conventional Commits.
