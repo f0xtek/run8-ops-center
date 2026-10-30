@@ -1,0 +1,18 @@
+{{define "main"}}
+<section class="card" aria-labelledby="dash-h">
+  <h2 id="dash-h">Dashboard</h2>
+  {{if .Chrome.LastIngest.IsZero}}
+  <p class="empty">No save has been ingested yet. This page fills in once the active world save is read.</p>
+  {{else}}
+  <p class="muted">Following <span class="mono">{{.Chrome.SaveName}}</span>{{with .Chrome.ActiveFile}}, latest file <span class="mono">{{.}}</span>{{end}}.</p>
+  {{end}}
+</section>
+<section id="attention" class="card" aria-labelledby="attn-h">
+  <h3 id="attn-h">Attention</h3>
+  {{if gt .Chrome.WarningCount 0}}
+  <p>{{.Chrome.WarningCount}} warning{{if ne .Chrome.WarningCount 1}}s{{end}} reported.</p>
+  {{else}}
+  <p class="empty">Nothing needs attention.</p>
+  {{end}}
+</section>
+{{end}}

@@ -1,0 +1,48 @@
+{{define "header"}}<header>
+  <div class="row">
+    <h1>Run8 Operations Centre</h1>
+    {{with .Chrome.SaveName}}<span class="rr" title="{{$.Chrome.Folders}}">{{.}}</span>{{end}}
+  </div>
+  <div class="daybox">
+    <span class="day" title="In-game date of the active save">{{if .Chrome.GameDate.IsZero}}No save yet{{else}}{{fmtGameDate .Chrome.GameDate}}{{end}}</span>
+    <span class="status" title="{{with .Chrome.ActiveFile}}Active file: {{.}}{{else}}No save has been ingested yet{{end}}">
+      {{if .Chrome.LastIngest.IsZero}}Waiting for a save{{else}}Last ingest <time datetime="{{iso .Chrome.LastIngest}}">{{fmtClock .Chrome.LastIngest}}</time>{{end}}
+    </span>
+    <a class="badge{{if gt .Chrome.WarningCount 0}} warn{{end}}" href="/#attention">Warnings <b>{{.Chrome.WarningCount}}</b></a>
+    <span class="live" role="status"><span class="visually-hidden">Live updates</span></span>
+    <button type="button" class="small" id="theme-toggle" aria-label="Switch colour theme" title="Switch colour theme">Theme</button>
+  </div>
+</header>{{end}}
+
+{{define "nav"}}<nav aria-label="Primary">
+  {{range .Tabs}}<a href="{{.Href}}"{{if eq .Key $.Active}} aria-current="page"{{end}}>{{.Label}}</a>
+  {{end}}
+</nav>{{end}}
+
+{{define "chrome"}}{{template "header" .}}
+{{template "nav" .}}{{end}}
+
+{{define "layout"}}<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{.Title}}</title>
+<link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/static/style.css">
+<script src="/static/theme.js"></script>
+</head>
+<body>
+<a class="skip" href="#main">Skip to main content</a>
+{{template "chrome" .}}
+<main id="main" tabindex="-1">
+{{template "main" .}}
+</main>
+<footer class="foot muted">
+  {{with .Chrome.SaveDir}}<span>World saves: <span class="mono">{{.}}</span></span>{{end}}
+  {{with .Chrome.AutoSaveDir}}<span>Auto-saves: <span class="mono">{{.}}</span></span>{{end}}
+</footer>
+<div id="toast" class="toast hidden" role="status" aria-live="polite"></div>
+<script src="/static/app.js"></script>
+</body>
+</html>{{end}}

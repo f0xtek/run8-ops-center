@@ -87,7 +87,7 @@
 ## 10. Web UI (`internal/web`)
 
 - [ ] 10.1 Implement the HTTP server (default bind `127.0.0.1`, configurable port and all-interfaces option), the port-in-use error, the `--no-browser` flag, browser opening, and embedded static assets. Verify that a manual run prints the URL and opens it, and that a second instance exits with the port error.
-- [ ] 10.2 Port the example's styling (CSS variables, light/dark, tiles, cards, pills, chips, offline font stacks) into a base layout with a header showing save name, game date and last ingest. Verify visually in a browser against `examples/switchlist-tracker.html`.
+- [x] 10.2 Port the example's styling (CSS variables, light/dark, tiles, cards, pills, chips, offline font stacks) into a base layout with a header showing save name, game date and last ingest. Verify visually in a browser against `examples/switchlist-tracker.html`.
 - [ ] 10.3 Implement the dashboard: summary tiles, active orders, available orders by kind, road train build percentage and the attention list. Verify by loading the reference save and checking that the tile counts match the car-status test expectations.
 - [ ] 10.4 Implement the order detail switchlist views: local orders with industry and yard lines, and road orders with departing consist and ordered stops. Show only the actions valid for each state, and mark cars shared between available orders. Verify in a browser by starting a whole job and a single yard line, then continuing, confirming and cancelling orders against fixture-driven state.
 - [ ] 10.5 Implement the yards & industries view, with per-type occupancy against capacity. Verify that HTI's occupancy displays correctly with a labelled fixture track map.
