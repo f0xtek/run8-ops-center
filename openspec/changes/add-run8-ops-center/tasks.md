@@ -29,9 +29,9 @@
 
 ## 4. Track mapping (`internal/trackmap`)
 
-- [ ] 4.1 Implement the label model (yard, industry or ignored, keyed by prefix/section), lookup, and atomic load/save of `trackmap.json`. Verify with a round-trip unit test.
-- [ ] 4.2 Implement learn-mode candidates: group snapshot trains by their unmapped sections, with car count, sample numbers and tags. Verify that on the reference fixture with an empty map, every train is a candidate and the section lists are correct for one sampled cut.
-- [ ] 4.3 Implement suggestions: an industry track when all of a cut's cars are tagged for one industry, and a neighbouring label when an adjacent section is labelled. Also implement bulk labelling of a candidate's sections. Verify that a test cut of 19 `BRI BRI` cars gets the suggestion BRI and that bulk labelling covers all of its sections.
+- [x] 4.1 Implement the label model (yard, industry or ignored, keyed by prefix/section), lookup, and atomic load/save of `trackmap.json`. Verify with a round-trip unit test.
+- [x] 4.2 Implement learn-mode candidates: group snapshot trains by their unmapped sections, with car count, sample numbers and tags. Verify that on the reference fixture with an empty map, every train is a candidate and the section lists are correct for one sampled cut.
+- [x] 4.3 Implement suggestions: an industry track when all of a cut's cars are tagged for one industry, and a neighbouring label when an adjacent section is labelled. Also implement bulk labelling of a candidate's sections. Verify that a test cut of 19 `BRI BRI` cars gets the suggestion BRI and that bulk labelling covers all of its sections.
 
 ## 5. Car status (`internal/carstatus`)
 
