@@ -45,10 +45,10 @@
 
 ## 7. Integration
 
-- [ ] 7.1 End-to-end smoke test on macOS: build a temp install tree from `references/AutoLabel/` (region folder `GulfCoast`, route folder `NS_AGS_Phase01`). Seed `<tmp>/data/profiles/ags-south-p1/` with a version-1 profile and a `trackmap.json`. Run the binary with `--data <tmp>/data --save WorldSave --save-dir <tmp>/Trains --autosave-dir <tmp>/AutoSaves`, and set the install folder to the temp tree in the setup view. Then run and confirm the import, and label the `BRI BRI` cut's track from its suggestion. Verify that:
+- [x] 7.1 End-to-end smoke test on macOS: build a temp install tree from `references/AutoLabel/` (region folder `GulfCoast`, route folder `NS_AGS_Phase01`). Seed `<tmp>/data/profiles/ags-south-p1/` with a version-1 profile and a `trackmap.json`. Run the binary with `--data <tmp>/data --save WorldSave --save-dir <tmp>/Trains --autosave-dir <tmp>/AutoSaves`, and set the install folder to the temp tree in the setup view. Then run and confirm the import, and label the `BRI BRI` cut's track from its suggestion. Verify that:
   - the profile was upgraded with backups and the seeded labels kept;
   - 221 cars are placed after the import;
   - the cut's 6 sections are labelled;
   - every file in the temp install has the same hash and mtime as before.
 - [ ] 7.2 On the Run8 PC, run `run8ops.exe --save <your world>` against the real install. Verify that the installed profile was upgraded with `.v1.bak` backups and the track map kept, that the import preview lists the AGS industries, `NOR / Bowl 1`…`56` and `NOR / Receiving 1`…`14`, that confirming places the parked cars, and that no file under `C:\Run8Studios\Run8 Train Simulator V3` changes.
-- [ ] 7.3 Run `go vet ./... && go test -race ./...` with and without `references/AutoLabel/` present, and run `openspec validate add-run8-track-import --strict`. Verify that all pass and that `git ls-files '*.r8' '*.ind'` prints nothing.
+- [x] 7.3 Run `go vet ./... && go test -race ./...` with and without `references/AutoLabel/` present, and run `openspec validate add-run8-track-import --strict`. Verify that all pass and that `git ls-files '*.r8' '*.ind'` prints nothing.
