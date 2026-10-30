@@ -1,0 +1,76 @@
+{{define "main"}}{{with .Data}}
+{{template "pt_notice" .Notice}}
+{{if .Empty}}
+<section class="card" id="no-save" aria-labelledby="dash-empty-h">
+  <h2 id="dash-empty-h">Waiting for the first save</h2>
+  <p class="empty">No save has been read yet. The counts and orders appear once Run8 writes a world save{{with .Source.SaveName}} named <span class="mono">{{.}}</span>{{end}}.</p>
+  <div class="muted">
+    {{with .Source.SaveName}}<div>World save followed: <span class="mono">{{.}}</span></div>{{end}}
+    {{with .Source.SaveDir}}<div>World save folder: <span class="mono">{{.}}</span></div>{{end}}
+    {{with .Source.AutoSaveDir}}<div>Auto-save folder: <span class="mono">{{.}}</span></div>{{end}}
+  </div>
+</section>
+{{else}}
+<section aria-label="Summary">
+  {{template "pt_tiles" .Tiles}}
+</section>
+{{end}}
+
+{{if or (not .Empty) .Detected .InProgress}}
+<section class="card" id="orders-active" aria-labelledby="dash-active-h">
+  <div class="row between"><h2 id="dash-active-h">Active orders</h2><a href="/orders">All orders</a></div>
+  {{if or .Detected .InProgress}}
+    {{if .Detected}}<h3>Completion detected</h3>
+    <p class="muted">The latest save shows the work done. Confirm it, or keep working if it is not finished.</p>
+    {{range .Detected}}{{template "ord_row" .}}{{end}}{{end}}
+    {{if .InProgress}}<h3>In progress</h3>
+    {{range .InProgress}}{{template "ord_row" .}}{{end}}{{end}}
+  {{else}}
+    <p class="empty">No orders in progress. Start one from the available orders below.</p>
+  {{end}}
+</section>
+{{end}}
+
+{{if not .Empty}}
+<section class="card" id="orders-available" aria-labelledby="dash-avail-h">
+  <div class="row between"><h2 id="dash-avail-h">Available orders</h2>{{with .ProfileName}}<span class="muted">Profile: {{.}}</span>{{end}}</div>
+  <h3>Local jobs</h3>
+  {{range .Local}}{{template "ord_row" .}}{{else}}<p class="empty">No local job has work to do right now.</p>{{end}}
+  <h3>Road trains</h3>
+  {{range .Road}}{{template "ord_row" .}}{{else}}<p class="empty">No road train has enough cars yet.</p>{{end}}
+</section>
+
+<section class="card" id="road-builds" aria-labelledby="dash-build-h">
+  <h2 id="dash-build-h">Road train build</h2>
+  <p class="muted">Cars waiting for each train, as a share of its maximum length. The dark mark is the length at which the order becomes available.</p>
+  {{range .Building}}
+  <div class="ind">
+    <div class="row between">
+      <div class="row"><b class="mono">{{.Symbol}}</b>{{with .Route}}<span class="muted">{{.}}</span>{{end}}{{if .Ready}} <span class="chip ready">Ready</span>{{else}} <span class="chip wait">Building</span>{{end}}</div>
+      <div class="row jobnav"><span class="muted mono">{{.Waiting}}{{with .Pct}} &middot; {{.}}{{end}} &middot; {{.Need}}</span>{{with .OrderURL}}<a class="btn small" style="padding:3px 8px;font-size:12px" href="{{.}}">Open</a>{{end}}</div>
+    </div>
+    {{template "pt_bar" .Bar}}
+  </div>
+  {{else}}<p class="empty">No cars are waiting for a road train.</p>{{end}}
+  {{if .Idle}}<details class="indedit"><summary>{{ptPlural (len .Idle) "train has" "trains have"}} no cars waiting</summary><p class="muted mono">{{.IdleNames}}</p></details>{{end}}
+</section>
+{{end}}
+
+<section id="attention" class="card" aria-labelledby="attn-h">
+  <h2 id="attn-h">Attention</h2>
+  {{if .Attention}}
+  <div>
+    {{range .Attention}}{{$a := .}}
+    <div class="ind">
+      <div class="row between">
+        <div class="row"><span class="chip off">{{.Label}}</span><span>{{.Text}}</span></div>
+        <div class="row">{{if not .Time.IsZero}}<span class="muted">{{ptWhen .Time}}</span>{{end}}{{with .Link}}<a href="{{.}}">{{$a.LinkText}}</a>{{end}}</div>
+      </div>
+    </div>
+    {{end}}
+  </div>
+  {{else}}
+  <p class="empty">Nothing needs attention.</p>
+  {{end}}
+</section>
+{{end}}{{end}}

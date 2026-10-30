@@ -1,0 +1,46 @@
+{{define "main"}}{{with .Data}}
+{{template "pt_notice" .Notice}}
+{{if .NotFound}}
+<section class="card" id="order-missing" aria-labelledby="ord-nf-h">
+  <h2 id="ord-nf-h">Order not found</h2>
+  <p>There is no order with the ID <span class="mono">{{.ID}}</span>. Available orders are recalculated on every save, so one can disappear when its cars move or when another order takes them.</p>
+  <div class="row jobnav"><a class="btn small" style="padding:3px 8px;font-size:12px" href="/orders">Back to orders</a></div>
+</section>
+{{else}}
+<section class="card" id="order" aria-labelledby="ord-h">
+  <div class="row between">
+    <div class="row"><h2 id="ord-h">{{.Row.Title}}</h2>{{template "pt_state" .Row.State}}<span class="muted">{{if .Road}}Road train{{else}}Local job{{end}} &middot; <span class="mono">{{.ID}}</span></span></div>
+    <div class="row jobnav"><a class="btn small" style="padding:3px 8px;font-size:12px" href="/orders">All orders</a>{{template "ord_actions" .Row.Actions}}</div>
+  </div>
+  <p class="muted">{{.Row.Summary}}</p>
+  {{with .Row.Bar}}<div class="row"><div style="flex:1;min-width:120px">{{template "pt_bar" .}}</div><span class="muted">{{$.Data.Row.Progress}}</span></div>{{end}}
+  {{with .Times}}<p class="muted">{{range $i, $t := .}}{{if $i}} &middot; {{end}}{{$t.Label}} {{$t.Real}}{{with $t.Game}} (game {{.}}){{end}}{{end}}</p>{{end}}
+  {{range .Flags}}<div class="banner" role="note"><span>{{.Message}}</span><span class="chip {{ptFlagClass .Code}}">{{ptFlagLabel .Code}}</span></div>{{end}}
+  {{with .SharedNote}}<p class="muted">{{.}}</p>{{end}}
+  {{template "pt_tiles" .Tiles}}
+</section>
+
+{{if .Road}}
+<section class="card" id="consist" aria-labelledby="ord-cons-h">
+  <div class="row between"><h3 id="ord-cons-h">Departing consist</h3><span class="muted">{{.ConsistFt}}</span></div>
+  {{template "pt_cars" .Consist}}
+</section>
+{{end}}
+
+{{range .Lines}}
+<section class="card" aria-label="{{.Label}}">
+  <div class="row between">
+    <div class="row"><h3>{{.Label}}</h3><span class="muted">{{.Kind}}</span>{{if .Done}} <span class="chip ready">Done</span>{{end}}{{if and .ShowState (not .Done)}}<span class="muted">{{.Progress}}</span>{{end}}</div>
+    <div class="row jobnav">{{template "ord_actions" .Start}}</div>
+  </div>
+  <h3 class="jobhead">Set out</h3>
+  {{template "pt_cars" .SetOuts}}
+  <h3 class="jobhead">Pick up</h3>
+  {{with .HomeNote}}<p class="muted">{{.}}</p>{{end}}
+  {{template "pt_cars" .PickUps}}
+</section>
+{{else}}
+<section class="card"><p class="empty">This order has no lines.</p></section>
+{{end}}
+{{end}}
+{{end}}{{end}}

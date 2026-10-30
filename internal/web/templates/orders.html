@@ -1,0 +1,44 @@
+{{define "main"}}{{with .Data}}
+{{template "pt_notice" .Notice}}
+{{if .Detected}}
+<section class="card" id="orders-detected" aria-labelledby="ord-det-h">
+  <h2 id="ord-det-h">Completion detected</h2>
+  <p class="muted">The latest save shows the work done. Confirm it, or keep working if it is not finished.</p>
+  {{range .Detected}}{{template "ord_row" .}}{{end}}
+</section>
+{{end}}
+
+<section class="card" id="orders-progress" aria-labelledby="ord-prog-h">
+  <h2 id="ord-prog-h">In progress</h2>
+  {{range .InProgress}}{{template "ord_row" .}}{{else}}<p class="empty">No orders in progress.</p>{{end}}
+</section>
+
+<section class="card" id="orders-available" aria-labelledby="ord-avail-h">
+  <h2 id="ord-avail-h">Available</h2>
+  <h3>Local jobs</h3>
+  {{range .Local}}{{template "ord_row" .}}{{else}}<p class="empty">No local job has work to do right now.</p>{{end}}
+  <h3>Road trains</h3>
+  {{range .Road}}{{template "ord_row" .}}{{else}}<p class="empty">No road train has enough cars yet.</p>{{end}}
+</section>
+
+<section class="card" id="orders-history" aria-labelledby="ord-hist-h">
+  <h2 id="ord-hist-h">History</h2>
+  {{if .History}}
+  {{if gt .HistoryTotal (len .History)}}<p class="muted">Showing the newest {{len .History}} of {{.HistoryTotal}} finished orders.</p>{{end}}
+  <div class="scroll"><table>
+    <thead><tr><th>Order</th><th>Result</th><th>Started</th><th>Finished</th><th>Cars</th></tr></thead>
+    <tbody>{{range .History}}
+      <tr>
+        <td><a href="{{.Href}}"><b>{{.Title}}</b></a> <span class="muted mono">{{.ID}}</span></td>
+        <td>{{template "pt_state" .State}}</td>
+        <td class="mono">{{.Started.Real}}{{with .Started.Game}}<div class="cargo">game {{.}}</div>{{end}}</td>
+        <td class="mono">{{.Finished.Real}}{{with .Finished.Game}}<div class="cargo">game {{.}}</div>{{end}}</td>
+        <td><details><summary>{{len .Cars}}</summary><div class="mono muted">{{range $i, $c := .Cars}}{{if $i}}, {{end}}{{$c}}{{end}}</div></details></td>
+      </tr>{{end}}
+    </tbody>
+  </table></div>
+  {{else}}
+  <p class="empty">No finished orders yet.</p>
+  {{end}}
+</section>
+{{end}}{{end}}
