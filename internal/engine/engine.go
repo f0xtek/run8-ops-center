@@ -12,6 +12,7 @@ import (
 	"run8-ops-center/internal/carstatus"
 	"run8-ops-center/internal/orders"
 	"run8-ops-center/internal/profile"
+	"run8-ops-center/internal/run8route"
 	"run8-ops-center/internal/run8save"
 	"run8-ops-center/internal/store"
 	"run8-ops-center/internal/trackmap"
@@ -58,7 +59,7 @@ type Engine struct {
 	settings   store.Settings
 	state      store.State
 	base       *profile.Profile // as loaded from disk
-	eff        *profile.Profile // base with threshold overrides applied
+	eff        *profile.Profile // base with threshold overrides and anchor findings applied
 	tm         *trackmap.Map
 	installed  []ProfileInfo
 	warnings   []Warning
@@ -70,9 +71,13 @@ type Engine struct {
 	candidates []trackmap.Candidate
 	locations  []trackmap.LocationGroup
 	coverage   trackmap.Coverage
-	viewSeq    uint64
-	pending    []store.ActivityEntry // activity of the current step, oldest first
-	stateDirty bool
+	route      run8route.Result // last Load of the active profile's route files
+	run8       Run8State
+	// anchorProblems are the anchor milepost findings added to eff's report.
+	anchorProblems []profile.Problem
+	viewSeq        uint64
+	pending        []store.ActivityEntry // activity of the current step, oldest first
+	stateDirty     bool
 }
 
 // New loads settings, state, the active profile and its track map, installing
@@ -139,7 +144,7 @@ func New(cfg Config) (*Engine, error) {
 	if fellBack {
 		e.addWarning("profile", fmt.Sprintf("profile %q from settings is not installed; using %q", e.settings.ProfileID, p.ID))
 	}
-	e.profileWarnings()
+	e.loadRoute()
 
 	e.source = Source{SaveName: cfg.SaveName, SaveDir: cfg.SaveDir, AutoSaveDir: cfg.AutoSaveDir}
 	e.recompute(false)

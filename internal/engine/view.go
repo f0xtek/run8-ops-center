@@ -33,6 +33,7 @@ func (e *Engine) publish() {
 		Building:    e.building,
 		Tiles:       tiles(e.status),
 		Warnings:    e.warnings,
+		Run8:        e.run8,
 		TrackMap:    e.tm,
 		Candidates:  e.candidates,
 		Locations:   e.locations,

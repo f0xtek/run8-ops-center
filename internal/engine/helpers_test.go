@@ -157,11 +157,12 @@ func readFile(t *testing.T, path string) []byte {
 func watchParse(path string) (*run8save.Snapshot, error) { return run8save.ParseFile(path) }
 
 // ingestWarnings drops the profile-report warning, which the bundled profile
-// always has.
+// always has, and the route file warnings, which the tests have because the
+// default Run8 install folder does not exist on the test machine.
 func ingestWarnings(v *View) []Warning {
 	var out []Warning
 	for _, w := range v.Warnings {
-		if w.Kind != "profile" {
+		if w.Kind != "profile" && w.Kind != warnRun8 {
 			out = append(out, w)
 		}
 	}

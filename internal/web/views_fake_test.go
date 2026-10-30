@@ -1,6 +1,7 @@
 package web
 
 import (
+	"errors"
 	"fmt"
 	"html"
 	"net/http"
@@ -279,6 +280,12 @@ func (b *vwBackend) SwitchProfile(id string) error {
 	b.settings.ProfileID = id
 	return nil
 }
+
+func (b *vwBackend) PreviewImport() (engine.ImportPreview, error) {
+	return engine.ImportPreview{}, errors.New("unused")
+}
+
+func (b *vwBackend) ConfirmImport(string) error { return errors.New("unused") }
 
 // vwServer builds a server with the four views registered against b.
 func vwServer(t *testing.T, b *vwBackend) http.Handler {

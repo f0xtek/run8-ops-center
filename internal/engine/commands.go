@@ -96,7 +96,7 @@ func (e *Engine) LabelCandidate(trainID string, l trackmap.Label) error {
 		if i < 0 {
 			return fmt.Errorf("train %q has no unmapped sections in the current save", trainID)
 		}
-		tm := cloneMap(e.tm)
+		tm := e.tm.Clone()
 		tm.Apply(e.candidates[i], l)
 		return e.commitMap(tm)
 	})
@@ -109,7 +109,7 @@ func (e *Engine) LabelSection(prefix, section int, l trackmap.Label) error {
 		if err != nil {
 			return err
 		}
-		tm := cloneMap(e.tm)
+		tm := e.tm.Clone()
 		tm.Set(prefix, section, l)
 		return e.commitMap(tm)
 	})
@@ -121,7 +121,7 @@ func (e *Engine) RemoveLabel(prefix, section int) error {
 		if _, ok := e.tm.Lookup(prefix, section); !ok {
 			return fmt.Errorf("section %s has no label", trackmap.Key(prefix, section))
 		}
-		tm := cloneMap(e.tm)
+		tm := e.tm.Clone()
 		tm.Remove(prefix, section)
 		return e.commitMap(tm)
 	})
@@ -136,7 +136,7 @@ func (e *Engine) RenameLocation(old, new trackmap.Location) (int, error) {
 		if err != nil {
 			return err
 		}
-		tm := cloneMap(e.tm)
+		tm := e.tm.Clone()
 		n = tm.Rename(old, l.Location())
 		if n == 0 {
 			return nil
@@ -186,16 +186,6 @@ func normaliseLabel(l trackmap.Label) (trackmap.Label, error) {
 	return out, nil
 }
 
-// cloneMap deep-copies a track map so the published one is never mutated.
-func cloneMap(m *trackmap.Map) *trackmap.Map {
-	out := trackmap.New()
-	for k, l := range m.Labels {
-		l.Industries = slices.Clone(l.Industries)
-		out.Labels[k] = l
-	}
-	return out
-}
-
 // SetThreshold sets or clears the per-train overrides. A nil pointer clears
 // that override.
 func (e *Engine) SetThreshold(symbol string, minLengthPct, maxCarAgeDays *float64) error {
@@ -225,7 +215,7 @@ func (e *Engine) SetThreshold(symbol string, minLengthPct, maxCarAgeDays *float6
 		if err := e.saveSettings(s); err != nil {
 			return err
 		}
-		e.eff = effective(e.base, s.Thresholds)
+		e.eff = e.effectiveProfile()
 		e.recompute(false)
 		return e.finish()
 	})
@@ -245,6 +235,8 @@ func (e *Engine) SetInstallDir(dir string) error {
 			_ = e.guard.SetInstallDir(old) // old was accepted before, so this cannot conflict
 			return err
 		}
+		e.loadRoute()
+		e.recompute(false)
 		return e.finish()
 	})
 }
@@ -299,7 +291,7 @@ func (e *Engine) SwitchProfile(id string) error {
 		for _, m := range problems {
 			e.addWarning("profile", m)
 		}
-		e.profileWarnings()
+		e.loadRoute()
 		e.recompute(true)
 		return e.finish()
 	})

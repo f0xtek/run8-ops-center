@@ -267,6 +267,10 @@ func (f *dashSim) SetThreshold(string, *float64, *float64) error { return errors
 func (f *dashSim) SetInstallDir(string) error                    { return errors.New("unused") }
 func (f *dashSim) SetServer(int, bool) error                     { return errors.New("unused") }
 func (f *dashSim) SwitchProfile(string) error                    { return errors.New("unused") }
+func (f *dashSim) PreviewImport() (engine.ImportPreview, error) {
+	return engine.ImportPreview{}, errors.New("unused")
+}
+func (f *dashSim) ConfirmImport(string) error { return errors.New("unused") }
 
 // dashNewServer registers the dashboard and order pages on a Server over b.
 func dashNewServer(t *testing.T, b engine.Backend) http.Handler {

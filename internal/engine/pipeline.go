@@ -54,10 +54,11 @@ func (e *Engine) ingest(ev watch.Event) {
 }
 
 // recompute rebuilds everything derived from the last snapshot, the active
-// profile and the track map: status, order progress (when reconcile is set),
-// available orders, learn-mode candidates, locations and coverage. It does
-// not persist or publish.
+// profile, the track map and the Run8 route files: the Run8 state, status,
+// order progress (when reconcile is set), available orders, learn-mode
+// candidates, locations and coverage. It does not persist or publish.
 func (e *Engine) recompute(reconcile bool) {
+	e.refreshRun8()
 	e.locations = e.tm.Locations()
 	if e.snap == nil {
 		e.status, e.avail, e.building, e.candidates = nil, nil, nil, nil
@@ -98,7 +99,7 @@ func (e *Engine) recompute(reconcile bool) {
 
 	gen := orders.Generate(orders.GenInput{Profile: e.eff, Status: st, Active: e.orders()})
 	e.avail, e.building = gen.Orders, gen.Building
-	e.candidates = e.tm.Candidates(e.snap, e.eff, nil) // route data is wired in task 5.1
+	e.candidates = e.tm.Candidates(e.snap, e.eff, e.routeData())
 	e.coverage = e.tm.Coverage(e.snap)
 }
 
