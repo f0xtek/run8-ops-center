@@ -134,7 +134,8 @@ func TestDataDirInsideRunInstallExitsBeforeCreatingAnything(t *testing.T) {
 		if code == 0 {
 			t.Fatalf("--data %s: exit code 0", data)
 		}
-		if !strings.Contains(stderr, install) {
+		// The error quotes paths with %q, which doubles backslashes on Windows.
+		if !strings.Contains(stderr, fmt.Sprintf("%q", install)) {
 			t.Fatalf("--data %s: error does not name the protected directory:\n%s", data, stderr)
 		}
 		if strings.Contains(stdout, "open:") {

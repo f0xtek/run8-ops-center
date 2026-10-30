@@ -85,7 +85,8 @@ func readDoc(t *testing.T) string {
 	if err != nil {
 		t.Fatal(err)
 	}
-	return string(b)
+	// A Windows checkout may convert the file to CRLF line endings.
+	return strings.ReplaceAll(string(b), "\r\n", "\n")
 }
 
 func docPaths(section string) []string {
