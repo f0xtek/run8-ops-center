@@ -14,18 +14,18 @@
 
 ## 3. Route profiles (`internal/profile`)
 
-- [ ] 3.1 Implement the industry CSV loader (title row, header row, continuation rows, quoted fields, tag trimming and whitespace collapsing). Verify that the fixture test gives 46 industries and 68 car-type entries, that CMC has 3 entries, and that BRR's incoming tag is `BRR`.
-- [ ] 3.2 Implement the limits TSV loader. It must stop at the first blank line, parse thousands separators and treat blank cells as no limit. Verify that the fixture test maps class code `NOL1` to train 131 at 8000 ft / 8000 t and that the subdivision table is ignored.
-- [ ] 3.3 Define the `profile.yaml` schema:
+- [x] 3.1 Implement the industry CSV loader (title row, header row, continuation rows, quoted fields, tag trimming and whitespace collapsing). Verify that the fixture test gives 46 industries and 68 car-type entries, that CMC has 3 entries, and that BRR's incoming tag is `BRR`.
+- [x] 3.2 Implement the limits TSV loader. It must stop at the first blank line, parse thousands separators and treat blank cells as no limit. Verify that the fixture test maps class code `NOL1` to train 131 at 8000 ft / 8000 t and that the subdivision table is ignored.
+- [x] 3.3 Define the `profile.yaml` schema:
   - yards;
   - local jobs: id, symbol, home yard, industries, yard lines with carried tags;
   - road trains: symbol, optional origin, class codes, off-map industries, ordered yard/industry stops with set-out tags, pick-up tags and pick-up car types, limit overrides, thresholds;
   - car-type patterns and defaults, tag aliases, yard-internal tags and route prefixes.
 
   Implement loading, with industries defaulted from the CSV local symbol. Verify with a unit test that loads a minimal YAML containing one local with a yard line and one road train with a stop.
-- [ ] 3.4 Implement the validation report: orphan outgoing tags (stop pick-up tags count as resolved), malformed tags, industries served by no job, yard lines or stops that reference unknown yards or industries, duplicate tags, and unmatched car models. Verify that the AGS fixture test reports `ATL NOL3`, `CSX1`, `MERCP`, `MERUP`, `ROS` and MB, does not report `JAX`, and does not fail the load.
-- [ ] 3.5 Author the bundled AGS South Phase 1 profile following design D10 and the D7 car-type patterns (add a Well Car pattern after checking the fixture's filename families), and embed it. Implement first-run installation into `<data>/profiles/ags-south-p1/`. Verify that a test on an empty temp data dir installs the profile and that it loads. The test must also check that A55 serves KYK and ABS with a TUS yard line carrying A37/A56/AGR, that 131 has a MCC stop, and that 346 is a through train.
-- [ ] 3.6 Document the profile file formats and how to add a new route in `docs/route-profiles.md`. Read `skill://unslop` before writing, and run the finished file through it. Verify that each documented field exists in the schema struct and that the unslop pass was applied.
+- [x] 3.4 Implement the validation report: orphan outgoing tags (stop pick-up tags count as resolved), malformed tags, industries served by no job, yard lines or stops that reference unknown yards or industries, duplicate tags, and unmatched car models. Verify that the AGS fixture test reports `ATL NOL3`, `CSX1`, `MERCP`, `MERUP`, `ROS` and MB, does not report `JAX`, and does not fail the load.
+- [x] 3.5 Author the bundled AGS South Phase 1 profile following design D10 and the D7 car-type patterns (add a Well Car pattern after checking the fixture's filename families), and embed it. Implement first-run installation into `<data>/profiles/ags-south-p1/`. Verify that a test on an empty temp data dir installs the profile and that it loads. The test must also check that A55 serves KYK and ABS with a TUS yard line carrying A37/A56/AGR, that 131 has a MCC stop, and that 346 is a through train.
+- [x] 3.6 Document the profile file formats and how to add a new route in `docs/route-profiles.md`. Read `skill://unslop` before writing, and run the finished file through it. Verify that each documented field exists in the schema struct and that the unslop pass was applied.
 
 ## 4. Track mapping (`internal/trackmap`)
 

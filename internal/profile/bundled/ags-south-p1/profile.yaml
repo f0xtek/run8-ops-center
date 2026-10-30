@@ -1,0 +1,193 @@
+# AGS South Phase 1 (NS Birmingham, AL) route profile for Run8 Operations Centre.
+#
+# The operating scheme follows the AGS NS Birmingham Guide. Industries come from
+# IndustryConfiguration.csv and train limits from train_limits.tsv, both in this
+# folder. Edit this file freely: the app never overwrites an installed profile.
+id: ags-south-p1
+name: AGS South Phase 1 (NS Birmingham)
+
+# Where Run8 keeps the world saves and auto-saves for this route.
+defaultSaveDir: 'C:\Run8Studios\Run8 Train Simulator V3\Content\V3Routes\Regions\GulfCoast\Trains'
+defaultAutoSaveDir: 'C:\Run8Studios\Run8 Train Simulator V3\Content\V3Routes\Regions\GulfCoast\AutoSaves'
+
+yards:
+  - {code: NOR, name: Norris}
+  - {code: TUS, name: Tuscaloosa}
+  - {code: MCC, name: McCalla}
+  - {code: BES, name: Bessemer}
+  - {code: 32ND, name: 32nd Street}
+
+# Local jobs. Limits come from the row of train_limits.tsv with the same symbol.
+# A job with no row (A37, A56, A39, BRI, CSXB) has no limit until you add a
+# "limit:" block here.
+localJobs:
+  - id: ab10
+    symbol: AB10
+    homeYard: NOR
+    industries: [FIN, BSI, WWT, BRR, SPS, CMC, WRG]
+  - id: ab11
+    symbol: AB11
+    homeYard: NOR
+    industries: [ONS, SMC, JSI, ERS, DPC, BFB]
+    yardLines:
+      - yard: 32ND
+        carries: [BNSF]
+  - id: ab45
+    symbol: AB45
+    homeYard: NOR
+    industries: [STI, GFS, HTI, BLX, JPI, BHM]
+    yardLines:
+      - yard: BES
+        carries: [BRL, WWL]
+  - id: a44
+    symbol: A44
+    homeYard: NOR
+    industries: [LPT, SAS, TMN]
+    yardLines:
+      - yard: MCC
+        carries: [A39]
+  - id: a55
+    symbol: A55
+    homeYard: NOR
+    industries: [KYK, ABS]
+    yardLines:
+      - yard: TUS
+        carries: [A37, A56, AGR]
+  - id: a37
+    symbol: A37
+    homeYard: TUS
+    industries: [CYC, SIS, DAB, FRP]
+  - id: a56
+    symbol: A56
+    homeYard: TUS
+    industries: [MOD, MSC, TBP, CVA, HBX, MVW, AGR]
+  - id: a39
+    symbol: A39
+    homeYard: MCC
+    industries: [CPS, 84L, COP, PSC, GES]
+  - id: bri
+    symbol: BRI
+    homeYard: MCC
+    industries: [BRI]
+  - id: csx-bes
+    symbol: CSXB
+    homeYard: BES
+    industries: [BRL, WWL]
+
+# Road trains. With an origin they leave that yard once they reach minLengthPct
+# of their maximum length (default 50). Without an origin they are through
+# trains that only work their stops (default minLengthPct 0). Class codes
+# default to the train's row in train_limits.tsv.
+roadTrains:
+  - symbol: '131'
+    origin: NOR
+    stops:
+      - kind: yard
+        target: MCC
+        setOut: [BRI]
+        pickUp: [NOL, MER]
+        pickUpCarTypes: [Autorack Car]
+  - symbol: '339'
+    origin: NOR
+    stops:
+      - kind: yard
+        target: MCC
+        setOut: [BRI]
+        pickUp: [NOL, MER]
+        pickUpCarTypes: [Autorack Car]
+  - symbol: '346'
+    stops:
+      - kind: yard
+        target: MCC
+        pickUp: [ATL]
+        pickUpCarTypes: [Autorack Car]
+  - symbol: 28J
+    stops:
+      - kind: yard
+        target: MCC
+        pickUp: [ATL, JAX]
+        pickUpCarTypes: [Well Car]
+  - symbol: 29K
+    stops:
+      - kind: yard
+        target: MCC
+        pickUp: [MER]
+        pickUpCarTypes: [Well Car]
+  - symbol: A28
+    origin: NOR
+    offMapIndustries: [A28]
+    stops:
+      - kind: industry
+        target: PHS
+  - symbol: Y130
+    origin: NOR
+  - {symbol: '345', origin: NOR}
+  - {symbol: '355', origin: NOR}
+  - {symbol: '108', origin: NOR}
+  - {symbol: 16T, origin: NOR}
+  - {symbol: '178', origin: NOR}
+  - {symbol: '154', origin: NOR}
+  - {symbol: '156', origin: NOR}
+  - {symbol: '378', origin: NOR}
+  - {symbol: '341', origin: NOR}
+  - {symbol: '183', origin: NOR}
+  - {symbol: '385', origin: NOR}
+  - {symbol: A79, origin: NOR}
+
+# Car model file-name prefixes, first match wins. Both spellings of "Autorack"
+# appear in the AGS models. Models that match nothing show up in the profile
+# report as unmatched.
+carTypes:
+  - {prefix: R8_Autorack_, type: Autorack Car}
+  - {prefix: R8_AutoRack_, type: Autorack Car}
+  - {prefix: R8_Boxcar_, type: Box Car}
+  - {prefix: R8_Box_, type: Box Car}
+  - {prefix: R8_Gon_, type: Gondola}
+  - {prefix: R8_Bulkhead_, type: Bulkhead_Flat}
+  - {prefix: R8_Centerbeam_, type: Centerbeam Flat Car}
+  - {prefix: R8_Coil_, type: CoilCar}
+  - {prefix: R8_C14Hopper_, type: Two Bay Covered Hopper}
+  - {prefix: R8_CoveredHopper_, type: Covered Hopper}
+  - {prefix: R8_PlasticPelletHopper_, type: PlasticPellet_Hopper}
+  - {prefix: R8_ChipHopper_, type: Woodchip_Hopper}
+  - {prefix: R8_Hopper_, type: Open Hopper}
+  - {prefix: R8_Ortner_, type: AggregateHopper}
+  - {prefix: Run8_Tank, type: Tank Car}
+  - {prefix: R8_T104_, type: Tank Car}
+  - {prefix: R8_T389_, type: Tank Car}
+  - {prefix: Run8_52ftwell_, type: Well Car}
+  - {prefix: Run8_WellCar, type: Well Car}
+  - {prefix: R8_Reefer_, type: Reefer Car}
+  - {prefix: R8_Pig_, type: Intermodal Flat Car}
+
+# Default length (feet) and tare weight (tons) per car type. These are rough
+# averages for the Run8 models, not values read from the car files.
+carDefaults:
+  Autorack Car: {lengthFt: 89, tareTons: 48}
+  Box Car: {lengthFt: 55, tareTons: 33}
+  Gondola: {lengthFt: 55, tareTons: 30}
+  Bulkhead_Flat: {lengthFt: 60, tareTons: 32}
+  Centerbeam Flat Car: {lengthFt: 73, tareTons: 35}
+  CoilCar: {lengthFt: 54, tareTons: 33}
+  Two Bay Covered Hopper: {lengthFt: 42, tareTons: 27}
+  Covered Hopper: {lengthFt: 60, tareTons: 30}
+  PlasticPellet_Hopper: {lengthFt: 60, tareTons: 31}
+  Woodchip_Hopper: {lengthFt: 62, tareTons: 31}
+  Open Hopper: {lengthFt: 54, tareTons: 27}
+  AggregateHopper: {lengthFt: 50, tareTons: 25}
+  Tank Car: {lengthFt: 55, tareTons: 33}
+  Well Car: {lengthFt: 65, tareTons: 33}
+  Reefer Car: {lengthFt: 64, tareTons: 38}
+  Intermodal Flat Car: {lengthFt: 89, tareTons: 34}
+unknownDefaults: {lengthFt: 60, tareTons: 30}
+
+# Outgoing tags that have no road train in train_limits.tsv can be routed with
+# "alias: target" pairs. The AGS profile leaves MERCP and MERUP unaliased, so the
+# profile report lists them for you to decide.
+aliases: {}
+
+# Tags that mean "stays in the yard".
+yardInternalTags: [NOR, NOR Hump, NOR Trim W, NOR Trim E]
+
+# Track section prefixes belonging to this route.
+routePrefixes: [280]
