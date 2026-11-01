@@ -11,6 +11,7 @@ import (
 	"run8-ops-center/internal/orders"
 	"run8-ops-center/internal/run8save"
 	"run8-ops-center/internal/store"
+	"run8-ops-center/internal/trackmap"
 	"run8-ops-center/internal/watch"
 )
 
@@ -60,6 +61,7 @@ func (e *Engine) ingest(ev watch.Event) {
 func (e *Engine) recompute(reconcile bool) {
 	e.refreshRun8()
 	e.locations = e.tm.Locations()
+	e.locationFt = trackmap.LocationLengthsFt(e.locations, e.eff, e.routeData())
 	if e.snap == nil {
 		e.status, e.avail, e.building, e.candidates = nil, nil, nil, nil
 		e.coverage = e.tm.Coverage(nil)

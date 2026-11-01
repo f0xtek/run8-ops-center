@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"slices"
 	"sort"
+	"strings"
 
 	"run8-ops-center/internal/carstatus"
 	"run8-ops-center/internal/engine"
@@ -33,11 +34,23 @@ type yardsYard struct {
 	NotInProf bool // a track is labelled for this code but the profile has no such yard
 	Cars      int
 	Tracks    []yardsTrack
+	Listed    []yardsListed // every track the profile lists for the yard
+	Labelled  int           // how many of Listed are labelled
 }
 
 type yardsTrack struct {
 	Name string
 	Cars []yardsCar
+}
+
+// yardsListed is one track a profile yard lists, with what the labels say about it.
+type yardsListed struct {
+	Name     string
+	Kind     string // "" for a yard track, else "siding" or "main line"
+	ListedFt string // "710 ft", "" when the profile gives no length
+	Measured string // from the labelled sections, "" when there are none or no route data
+	Labelled bool
+	Cars     int
 }
 
 type yardsCar struct {
@@ -174,7 +187,14 @@ func yardsBuild(v *engine.View) yardsPage {
 	}
 	for _, y := range prof.Yards {
 		known[y.Code] = true
-		p.Yards = append(p.Yards, mkYard(y.Code, y.Name, false))
+		yy := mkYard(y.Code, y.Name, false)
+		yy.Listed = yardsListedTracks(y, yy.Tracks, v.LocationFt)
+		for _, e := range yy.Listed {
+			if e.Labelled {
+				yy.Labelled++
+			}
+		}
+		p.Yards = append(p.Yards, yy)
 	}
 	var extra []string
 	for code := range yardTracks {
@@ -234,6 +254,41 @@ func yardsBuild(v *engine.View) yardsPage {
 		p.Groups = append(p.Groups, rest)
 	}
 	return p
+}
+
+// yardsListedTracks pairs every track the profile lists for y with the labelled
+// track of the same name, ignoring case and extra spaces. A labelled track shows
+// its car count and, when route data measured it, its measured length.
+func yardsListedTracks(y profile.Yard, labelled []yardsTrack, measuredFt map[string]int) []yardsListed {
+	if len(y.Tracks) == 0 {
+		return nil
+	}
+	byName := make(map[string]yardsTrack, len(labelled))
+	for _, t := range labelled {
+		byName[strings.ToLower(profile.NormTag(t.Name))] = t
+	}
+	out := make([]yardsListed, 0, len(y.Tracks))
+	for _, lt := range y.Tracks {
+		e := yardsListed{Name: lt.Name}
+		switch lt.Kind {
+		case profile.TrackSiding:
+			e.Kind = "siding"
+		case profile.TrackMain:
+			e.Kind = "main line"
+		}
+		if lt.LengthFt > 0 {
+			e.ListedFt = ptGroup(lt.LengthFt) + " ft"
+		}
+		if t, ok := byName[strings.ToLower(profile.NormTag(lt.Name))]; ok {
+			e.Labelled, e.Cars = true, len(t.Cars)
+			key := trackmap.Location{Kind: trackmap.KindYard, Yard: y.Code, Track: t.Name}.Key()
+			if ft := measuredFt[key]; ft > 0 {
+				e.Measured = ptGroup(ft) + " ft"
+			}
+		}
+		out = append(out, e)
+	}
+	return out
 }
 
 func yardsBuildIndustry(ind *profile.Industry, cars []*carstatus.Car) yardsIndustry {

@@ -96,6 +96,25 @@ type learnCandidate struct {
 	ExtraMore   int
 	Suggestion  *learnSuggestion
 	prefillForm learnFields
+	// Measured is the measured length of the track the cut stands on, "" without
+	// route data.
+	Measured string
+	// Hints lists, for each yard with a track list, the names the label form
+	// offers, nearest listed length first.
+	Hints []learnHintYard
+}
+
+// learnHintYard is the track names one yard offers a candidate.
+type learnHintYard struct {
+	Code    string
+	Options []learnHintOption
+}
+
+// learnHintOption is one listed track as a datalist option.
+type learnHintOption struct {
+	Name  string
+	Label string // "710 ft listed, 717 ft measured"
+	Kind  string // profile.TrackKind: yard, siding or main
 }
 
 type learnSuggestion struct {
@@ -165,6 +184,10 @@ func learnBuild(v *engine.View, q url.Values, errMsg string) learnPage {
 		default:
 			lc.Title = "Train"
 		}
+		if c.TrackLengthFt > 0 {
+			lc.Measured = ptGroup(c.TrackLengthFt) + " ft"
+		}
+		lc.Hints = learnHints(v, c)
 		lc.Shown = c.Sections
 		if len(lc.Shown) > learnSectionsShown {
 			lc.Shown = lc.Shown[:learnSectionsShown]
@@ -230,6 +253,65 @@ func learnBuild(v *engine.View, q url.Values, errMsg string) learnPage {
 		}
 	}
 	return p
+}
+
+// learnHints builds the track name options of every profile yard that lists
+// tracks, for one candidate. Names already labelled in a yard are left out.
+func learnHints(v *engine.View, c trackmap.Candidate) []learnHintYard {
+	if v.Profile == nil {
+		return nil
+	}
+	var out []learnHintYard
+	for _, y := range v.Profile.Yards {
+		if len(y.Tracks) == 0 {
+			continue
+		}
+		hy := learnHintYard{Code: y.Code}
+		for _, h := range trackmap.NameHints(y, v.TrackMap.TrackNamesInYard(y.Code), c.TrackLengthFt) {
+			hy.Options = append(hy.Options, learnHintOption{
+				Name: h.Track.Name, Label: learnHintLabel(h, c.TrackLengthFt), Kind: string(h.Track.Kind),
+			})
+		}
+		out = append(out, hy)
+	}
+	return out
+}
+
+// learnHintLabel describes a hint: its listed length and the measured one, plus
+// a note on a siding or main line, which is labelled as ignored.
+func learnHintLabel(h trackmap.NameHint, measuredFt int) string {
+	label := "listed length unknown"
+	if h.Track.LengthFt > 0 {
+		label = ptGroup(h.Track.LengthFt) + " ft listed"
+		if measuredFt > 0 {
+			label += ", " + ptGroup(measuredFt) + " ft measured"
+		}
+	}
+	switch h.Track.Kind {
+	case profile.TrackSiding:
+		label += " (siding, ignored)"
+	case profile.TrackMain:
+		label += " (main line, ignored)"
+	}
+	return label
+}
+
+// learnSidingRule turns a yard label whose track name is a siding or main line
+// the yard lists into an ignored label. It reports the listed track that caused
+// it, so the answer can say so. Any other label comes back unchanged.
+func learnSidingRule(l trackmap.Label, prof *profile.Profile) (trackmap.Label, *profile.YardTrack) {
+	if l.Kind != trackmap.KindYard || prof == nil {
+		return l, nil
+	}
+	y := prof.YardByCode(l.Yard)
+	if y == nil {
+		return l, nil
+	}
+	t, ok := y.TrackByName(l.Track)
+	if !ok || (t.Kind != profile.TrackSiding && t.Kind != profile.TrackMain) {
+		return l, nil
+	}
+	return trackmap.Label{Kind: trackmap.KindIgnored}, &t
 }
 
 // learnLabelText renders a label for display, e.g. "yard Norris / Bowl 14". A yard
@@ -313,11 +395,13 @@ func (h *learnHandler) label(w http.ResponseWriter, r *http.Request) {
 		h.fail(w, r, vwBadForm, "could not read the form: "+err.Error())
 		return
 	}
-	l, err := learnParseLabel(r, "", h.b.View().Profile)
+	prof := h.b.View().Profile
+	l, err := learnParseLabel(r, "", prof)
 	if err != nil {
 		h.fail(w, r, vwBadForm, err.Error())
 		return
 	}
+	l, listed := learnSidingRule(l, prof)
 	section, train := vwClean(r.PostFormValue("section")), vwClean(r.PostFormValue("train"))
 	var toast string
 	switch {
@@ -341,6 +425,13 @@ func (h *learnHandler) label(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		h.fail(w, r, vwRefused, err.Error())
 		return
+	}
+	if listed != nil {
+		kind := "a siding"
+		if listed.Kind == profile.TrackMain {
+			kind = "a main line"
+		}
+		toast += fmt.Sprintf(", because %s is %s", listed.Name, kind)
 	}
 	h.done(w, r, toast)
 }
@@ -419,6 +510,10 @@ func learnPlural(n int) string {
 type learnForm struct {
 	Fields learnFields
 	Yards  []profile.Yard
+	// HintsID is the prefix of the ids of the form's track name datalists, "" for a
+	// form with no hints. A yard's list has the id HintsID + "-" + yard code.
+	HintsID string
+	Hints   []learnHintYard
 }
 
 // Form pairs label values with the yards to choose from.
@@ -433,4 +528,36 @@ func learnBool(b bool) int {
 		return 1
 	}
 	return 0
+}
+
+// CandidateForm is the label form of one candidate: Form with the track name
+// hints of every listed yard.
+func (p learnPage) CandidateForm(c learnCandidate) learnForm {
+	f := p.Form(c.Prefill())
+	f.HintsID, f.Hints = c.HintsID(), c.Hints
+	return f
+}
+
+// HintsID is the datalist id prefix for this candidate.
+func (c learnCandidate) HintsID() string {
+	return "hints-" + strings.Map(func(r rune) rune {
+		if r >= 'a' && r <= 'z' || r >= 'A' && r <= 'Z' || r >= '0' && r <= '9' || r == '-' || r == '_' {
+			return r
+		}
+		return '_'
+	}, c.TrainID)
+}
+
+// ListID is the id of the datalist for the form's selected yard, "" when that
+// yard has no track list.
+func (f learnForm) ListID() string {
+	if f.HintsID == "" {
+		return ""
+	}
+	for _, h := range f.Hints {
+		if h.Code == f.Fields.Yard {
+			return f.HintsID + "-" + h.Code
+		}
+	}
+	return ""
 }

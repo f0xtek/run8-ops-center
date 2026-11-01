@@ -70,6 +70,7 @@ type Engine struct {
 	building   []orders.RoadBuild
 	candidates []trackmap.Candidate
 	locations  []trackmap.LocationGroup
+	locationFt map[string]int // measured length of each yard location, from the route data
 	coverage   trackmap.Coverage
 	route      run8route.Result // last Load of the active profile's route files
 	run8       Run8State

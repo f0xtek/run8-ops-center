@@ -118,6 +118,10 @@ type View struct {
 	TrackMap   *trackmap.Map
 	Candidates []trackmap.Candidate     // learn mode: unmapped cuts and trains with suggestions
 	Locations  []trackmap.LocationGroup // labelled sections grouped by location
+	// LocationFt is the measured length in feet of each yard location's
+	// labelled sections, keyed by trackmap.Location.Key. It is nil without
+	// route data, and holds no entry for a location that measures nothing.
+	LocationFt map[string]int
 	Coverage   trackmap.Coverage
 
 	Activity []store.ActivityEntry // newest first

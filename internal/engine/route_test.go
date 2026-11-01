@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"io/fs"
+	"math"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -490,5 +491,62 @@ func TestStartupUpgradesAnOldProfile(t *testing.T) {
 	}
 	if l, _ := v.TrackMap.Lookup(280, 5101); l.Track != "Bowl 14" || l.Source != "" {
 		t.Errorf("280/5101 = %+v", l)
+	}
+}
+
+func TestViewMeasuresYardLocationsFromRouteData(t *testing.T) {
+	h, _ := startWithInstall(t, run8routetest.Synthetic())
+	if v := h.eng.View(); len(v.LocationFt) != 0 {
+		t.Fatalf("no labels yet, but LocationFt = %v", v.LocationFt)
+	}
+	p, err := h.eng.PreviewImport()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := h.eng.ConfirmImport(p.Token); err != nil {
+		t.Fatal(err)
+	}
+	topo := h.eng.routeData().Topology
+	feet := func(sections ...int) int {
+		m := 0.0
+		for _, s := range sections {
+			sec, ok := topo.Section(s)
+			if !ok {
+				t.Fatalf("no section %d", s)
+			}
+			m += sec.LengthM
+		}
+		return int(math.Round(m * 3.28084))
+	}
+	key := func(track string) string {
+		return trackmap.Location{Kind: trackmap.KindYard, Yard: "NOR", Track: track}.Key()
+	}
+	v := h.eng.View()
+	// RCV 1 is sections 300, 301 and 302; the import names it "Receiving 1".
+	if got, want := v.LocationFt[key("Receiving 1")], feet(300, 301, 302); got != want || want < 500 {
+		t.Errorf("Receiving 1 measures %d ft, want %d", got, want)
+	}
+	for k := range v.LocationFt {
+		if !strings.HasPrefix(k, "yard|") {
+			t.Errorf("LocationFt holds %q, which is not a yard location", k)
+		}
+	}
+
+	// A manual label on one section measures that section alone, and the view follows at once.
+	manual := trackmap.Label{Kind: trackmap.KindYard, Yard: "NOR", Track: "Track 9"}
+	if err := h.eng.LabelSection(run8routetest.Prefix, run8routetest.SecSiding1, manual); err != nil {
+		t.Fatal(err)
+	}
+	if got, want := h.eng.View().LocationFt[key("Track 9")], feet(run8routetest.SecSiding1); got != want || want == 0 {
+		t.Errorf("Track 9 measures %d ft, want %d", got, want)
+	}
+
+	// Without Run8 folders there is no route data and so no measured length.
+	bare := start(t)
+	if err := bare.eng.LabelSection(run8routetest.Prefix, run8routetest.SecSiding1, manual); err != nil {
+		t.Fatal(err)
+	}
+	if v := bare.eng.View(); v.LocationFt != nil {
+		t.Errorf("no install: LocationFt = %v", v.LocationFt)
 	}
 }

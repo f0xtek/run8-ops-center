@@ -148,7 +148,8 @@ func (b *vwBackend) viewLocked() *engine.View {
 		Source: b.source, HasSnapshot: true, Profile: prof, Profiles: b.profiles,
 		Status: st, TrackMap: b.tm,
 		Candidates: b.tm.Candidates(b.snap, prof, data), Locations: b.tm.Locations(),
-		Coverage: b.tm.Coverage(b.snap), Activity: append([]store.ActivityEntry(nil), b.activity...),
+		LocationFt: trackmap.LocationLengthsFt(b.tm.Locations(), prof, data),
+		Coverage:   b.tm.Coverage(b.snap), Activity: append([]store.ActivityEntry(nil), b.activity...),
 		Settings: b.settings,
 	}
 	if b.imp != nil {

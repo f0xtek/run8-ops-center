@@ -37,6 +37,7 @@ func (e *Engine) publish() {
 		TrackMap:    e.tm,
 		Candidates:  e.candidates,
 		Locations:   e.locations,
+		LocationFt:  e.locationFt,
 		Coverage:    e.coverage,
 		Activity:    e.state.Activity,
 		Settings:    cloneSettings(e.settings),
