@@ -22,6 +22,6 @@
 
 ## 5. Integration
 
-- [ ] 5.1 Smoke test on macOS: seed a version-2 AGS profile with a `trackmap.json`, run the binary against a temp install from `references/AutoLabel/`, and confirm the import. In learn mode, label one Tuscaloosa cut and one 32nd St cut from their hints. Verify that the profile was upgraded with `.v2.bak` backups and the labels were kept, that the hints rank as expected, that the two labels use the map names, and that the yards view lists the remaining tracks as not labelled yet.
-- [ ] 5.2 Run `go vet ./... && go test -race ./...` with and without `references/AutoLabel/`, and `openspec validate add-yard-track-hints --strict`. Verify that all pass and that `git ls-files '*.r8' '*.ind' 'references/*'` prints nothing.
+- [x] 5.1 Smoke test on macOS: seed a version-2 AGS profile with a `trackmap.json`, run the binary against a temp install from `references/AutoLabel/`, and confirm the import. In learn mode, label one Tuscaloosa cut and one 32nd St cut from their hints. Verify that the profile was upgraded with `.v2.bak` backups and the labels were kept, that the hints rank as expected, that the two labels use the map names, and that the yards view lists the remaining tracks as not labelled yet.
+- [x] 5.2 Run `go vet ./... && go test -race ./...` with and without `references/AutoLabel/`, and `openspec validate add-yard-track-hints --strict`. Verify that all pass and that `git ls-files '*.r8' '*.ind' 'references/*'` prints nothing.
 - [ ] 5.3 On the Run8 PC, pull the branch, build it, and label a few yard tracks from the hints. Verify that the profile upgrade kept the track map and that no file under `C:\Run8Studios\Run8 Train Simulator V3` changes.
