@@ -73,9 +73,11 @@ func Load(dir string) (*Profile, error) {
 
 	p := build(dir, &s, industries, rows)
 	p.SchemaVersion = version
+	trackProblems := buildYardTracks(p, s.Yards)
 	var run8Problems []Problem
 	p.Run8, run8Problems = buildRun8(p, s.Run8)
 	p.Report = validate(p, rows)
+	p.Report.Problems = append(p.Report.Problems, trackProblems...)
 	p.Report.Problems = append(p.Report.Problems, run8Problems...)
 	return p, nil
 }
@@ -87,6 +89,44 @@ func schemaVersionOf(v int) int {
 		return 1
 	}
 	return v
+}
+
+// buildYardTracks fills Yard.Tracks from the yard schemas, which are in the
+// same order as p.Yards. It drops an entry with an empty or repeated name, a
+// negative length or an unknown kind, and returns one problem for each
+// dropped entry. Names repeat when they match after whitespace normalisation
+// and case folding. The rest of the yard still loads.
+func buildYardTracks(p *Profile, yards []yardSchema) []Problem {
+	v := &validator{p: p, seen: map[string]bool{}}
+	for i, y := range yards {
+		code := p.Yards[i].Code
+		seen := map[string]bool{}
+		for _, t := range y.Tracks {
+			name := NormTag(t.Name)
+			kind := TrackKind(strings.ToLower(strings.TrimSpace(t.Kind)))
+			switch {
+			case name == "":
+				v.add(CodeInvalidTrack, code, "yard %s lists a track with no name", code)
+				continue
+			case t.LengthFt < 0:
+				v.add(CodeInvalidTrack, name, "yard %s track %q has a negative length %d", code, name, t.LengthFt)
+				continue
+			case kind == "":
+				kind = TrackYard
+			case kind != TrackYard && kind != TrackSiding && kind != TrackMain:
+				v.add(CodeInvalidTrack, name, "yard %s track %q has unknown kind %q", code, name, t.Kind)
+				continue
+			}
+			key := strings.ToLower(name)
+			if seen[key] {
+				v.add(CodeDuplicateTrack, name, "yard %s lists track %q more than once", code, name)
+				continue
+			}
+			seen[key] = true
+			p.Yards[i].Tracks = append(p.Yards[i].Tracks, YardTrack{Name: name, LengthFt: t.LengthFt, Kind: kind})
+		}
+	}
+	return v.out
 }
 
 // build assembles a Profile from the parsed files.

@@ -54,7 +54,7 @@ Unknown keys are an error, so a misspelled field stops the load instead of being
 
 | Field | Meaning |
 |---|---|
-| `schemaVersion` | Version of the profile format. Leave it out for version 1. The app refuses a profile whose version is newer than the one it supports, and the error names both numbers. The bundled AGS profile is version 2. |
+| `schemaVersion` | Version of the profile format. Leave it out for version 1. The app refuses a profile whose version is newer than the one it supports, and the error names both numbers. The bundled AGS profile is version 3. |
 | `id` | Profile ID. Defaults to the folder name. |
 | `name` | Display name. Defaults to the ID. |
 | `defaultSaveDir` | Run8 folder that holds the world saves. |
@@ -68,8 +68,34 @@ Unknown keys are an error, so a misspelled field stops the load instead of being
 | `yards[].name` | Display name, for example `Norris`. |
 | `yards[].anchorMileposts` | Run8 milepost station names that mark where the yard is, for example `Receiving Yard`. Matching is exact after whitespace is collapsed. A name that matches no milepost is reported once the route data has been read. |
 | `yards[].anchorIndustries` | Incoming tags of industries that mark where the yard is, for example `BRI`. Use an industry anchor when no milepost sits near the yard. A tag that is not a profile industry is reported. |
+| `yards[].tracks[].name` | Name of a track in the yard, for example `TY01`. Names must be unique within the yard after whitespace is collapsed and case is ignored. The app drops an entry with an empty or repeated name and reports it. |
+| `yards[].tracks[].lengthFt` | Length of the track in feet. Leave it out, or use `0`, when the length is unknown. The app drops an entry with a negative length and reports it. |
+| `yards[].tracks[].kind` | `yard` for a track that holds cars, `siding` or `main` for a siding or main line. Defaults to `yard`. The app drops an entry with any other value and reports it. |
 
 Learn mode uses anchors to suggest a yard for a cut that sits outside every labelled track, when an anchor lies within 3 km.
+
+#### Yard track lists
+
+A track list holds the names and lengths of a yard's tracks. Copy them from the route's map. The bundled AGS lists come from The Depot's AGS South and Norris Yard maps and hold names and lengths only. Run8 does not supply them.
+
+When you label a cut in a yard that has a list, learn mode offers the listed names that no labelled section uses yet. It sorts them by how close each listed length is to the measured length of the track the cut stands on, and shows both lengths. It applies nothing until you pick a name, and you can still type any other name. The yards view lists every entry of the list and marks the entries that have no labelled section as not labelled yet. A yard without a list gets no hints.
+
+The `kind` decides how a name is labelled.
+
+- `yard` is the default. The sections get the yard and track name you chose.
+- `siding` and `main` are for sidings, thoroughfares and main lines. Picking one of these names labels the sections as ignored. The app also stores a yard label as ignored when the name you type matches one of these entries. The match ignores case and extra spaces.
+
+Leave out any track that the Run8 import already names. The AGS list for `NOR` has no receiving tracks, because the import labels them `Receiving 1` to `Receiving 14`.
+
+```yaml
+yards:
+  - code: TUS
+    name: Tuscaloosa
+    anchorMileposts: [Tuscaloosa MP 199.1]
+    tracks:
+      - {name: TY01, lengthFt: 1379}
+      - {name: Pass, lengthFt: 752, kind: siding}
+```
 
 ### Local jobs
 
@@ -167,6 +193,8 @@ Loading a profile never fails because of a validation problem. The loader loads 
 | `unmatched-model` | A car model in a save that matches no `carTypes` rule. This code comes from checking a save's models against the profile, not from loading. |
 | `invalid-run8` | A `run8` entry the app dropped: a region or folder name that is empty, absolute or contains a separator or `..`, a route prefix that is missing from `routePrefixes`, a hump with no controller name, or a `trackEnds` pattern that does not compile or lacks the `n` and `end` groups. |
 | `unmatched-anchor` | A yard `anchorMileposts` name that matches no milepost station name. The app reports it after it reads the route data, so it appears in the report only then. |
+| `invalid-track` | A yard `tracks` entry the app dropped because its name is empty, its length is negative or its kind is not `yard`, `siding` or `main`. The rest of the yard still loads. |
+| `duplicate-track` | A yard `tracks` entry the app dropped because an earlier entry in the same yard has the same name. Names match after whitespace is collapsed and case is ignored. The first entry stays. |
 
 To clear an `orphan-tag` problem, add an alias, add the tag to a train's `classCodes`, or add it to a stop's `pickUp`.
 
@@ -205,3 +233,4 @@ The AGS South Phase 1 profile follows the AGS NS Birmingham Guide. Some parts ar
 - Default car lengths and tares are approximate averages for the Run8 models. For example, an autorack is 89 ft and 48 tons, and a well car is 65 ft and 33 tons. They are not read from the Run8 car files.
 - The `Reefer Car`, `Intermodal Flat Car` and `AggregateHopper` rules are inferred from model names (`R8_Reefer_`, `R8_Pig_` and `R8_Ortner_`). No AGS industry takes reefers or intermodal flats, so those cars never match an industry.
 - In the AGS world save, the locomotive models and `R8_FCA_AutoFlood_III_NS` match no car-type rule.
+- The yard track lists come from The Depot's AGS South and Norris Yard maps. The kinds are judgement calls, so change a `kind` if you handle a track differently. The Norris map labels `WF01` as 11,148 ft at one end and 11,448 ft at the other. The list uses 11,448 ft, which is closer to the Run8 track lengths.

@@ -140,7 +140,16 @@ func snapshotDir(t *testing.T, dir string) map[string]string {
 }
 
 func TestInstallBundledUpgradesOlderProfile(t *testing.T) {
-	for _, header := range []string{"", "schemaVersion: 1\n"} {
+	for _, tc := range []struct {
+		header string
+		old    int
+	}{
+		{"", 1},
+		{"schemaVersion: 1\n", 1},
+		{"schemaVersion: 2\n", 2},
+	} {
+		header := tc.header
+		bak := fmt.Sprintf(".v%d.bak", tc.old)
 		o := installOld(t, header)
 		w := &recordingWriter{}
 		if err := InstallBundled(w, filepath.Dir(o.dir)); err != nil {
@@ -152,9 +161,9 @@ func TestInstallBundledUpgradesOlderProfile(t *testing.T) {
 			wrote = append(wrote, filepath.Base(p))
 		}
 		wantOrder := []string{
-			IndustryFile + ".v1.bak", IndustryFile,
-			LimitsFile + ".v1.bak", LimitsFile,
-			ProfileFile + ".v1.bak", ProfileFile,
+			IndustryFile + bak, IndustryFile,
+			LimitsFile + bak, LimitsFile,
+			ProfileFile + bak, ProfileFile,
 		}
 		if !reflect.DeepEqual(wrote, wantOrder) {
 			t.Errorf("header %q: write order = %v, want %v", header, wrote, wantOrder)
@@ -169,8 +178,8 @@ func TestInstallBundledUpgradesOlderProfile(t *testing.T) {
 			if got[name] != string(fresh) {
 				t.Errorf("%s was not replaced by the bundled file", name)
 			}
-			if got[name+".v1.bak"] != o.files[name] {
-				t.Errorf("%s.v1.bak = %q, want the old file %q", name, got[name+".v1.bak"], o.files[name])
+			if got[name+bak] != o.files[name] {
+				t.Errorf("%s%s = %q, want the old file %q", name, bak, got[name+bak], o.files[name])
 			}
 		}
 		for _, name := range []string{"trackmap.json", "notes-by-user"} {
@@ -258,7 +267,7 @@ func TestInstallBundledMissingProfileYAMLWritesNothing(t *testing.T) {
 }
 
 func TestInstallBundledInterruptedUpgradeCompletesAtNextRun(t *testing.T) {
-	o := installOld(t, "")
+	o := installOld(t, "schemaVersion: 2\n")
 	profiles := filepath.Dir(o.dir)
 
 	// The upgrade fails before profile.yaml is replaced.
@@ -285,8 +294,8 @@ func TestInstallBundledInterruptedUpgradeCompletesAtNextRun(t *testing.T) {
 		if got[name] != string(fresh) {
 			t.Errorf("%s not upgraded", name)
 		}
-		if got[name+".v1.bak"] != o.files[name] {
-			t.Errorf("%s.v1.bak = %q, want the user's original %q", name, got[name+".v1.bak"], o.files[name])
+		if got[name+".v2.bak"] != o.files[name] {
+			t.Errorf("%s.v2.bak = %q, want the user's original %q", name, got[name+".v2.bak"], o.files[name])
 		}
 	}
 	if got["trackmap.json"] != o.files["trackmap.json"] {

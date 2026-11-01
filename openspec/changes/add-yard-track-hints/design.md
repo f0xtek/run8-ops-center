@@ -92,7 +92,12 @@ Transcribed from The Depot's maps: AGS South v04.04.2026, pages 3 to 6, and Norr
   - MRH1 and MRH2, which belong to industry BRI.
   - Tuscaloosa's "Scale", which has no length and shares a line with Chevron on the map.
   - The local yard's first track, which has no label on the map.
-- **WF01** is labelled 11,148 ft at the west end of the map and 11,448 ft at the east end. The list uses 11,448 ft. Task 2.2 checks the Run8 run lengths and records which is closer.
+- **WF01** is labelled 11,148 ft at the west end of the map and 11,448 ft at the east end. The list uses 11,448 ft.
+  - A local-only check on `references/AutoLabel/` found two unlabelled runs of that length within 1,500 m of the West Forwarding Yard milepost, at 11,572 ft and 11,491 ft. The next unlabelled runs of 3,000 ft or more are 7,804, 7,446, 6,631, 5,656, 5,358, 4,654, 4,578, 4,403 and 3,735 ft, so no run is near 11,148 ft.
+  - The two runs are 124 and 43 ft (1.1% and 0.4%) from 11,448 ft, and 424 and 343 ft (3.8% and 3.1%) from 11,148 ft. The east-end figure is the closer one, so 11,448 ft stays.
+  - The route data holds only two runs of about 11,500 ft for the three tracks WF01 to WF03, so the third presumably splits at a switch. Ranking for these tracks will be rough, and the user picks the name.
+- **Southern Outbound** is labelled 2,395 ft on the vertical lead north of the East Forwarding Yard and 2,478 ft at the row of EF tracks. The list uses 2,478 ft, the label on the row.
+- **Second read** (task 2.2). Every entry was compared with a crop of the map, rendered to a temp folder and not kept. All names and lengths match the table above, and the kinds are unchanged. WF01 and Southern Outbound are the only tracks the map labels twice with different lengths. The counts per yard match the table: NOR 70, 32ND 8, TUS 12, BES 7 and MCC 8.
 
 ## Risks / Trade-offs
 

@@ -6,6 +6,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
 	"time"
@@ -428,9 +429,13 @@ func TestRun8StateFollowsTheFiles(t *testing.T) {
 	}
 }
 
+// yardTracksRE matches the `tracks:` block of a bundled yard, which a version-2
+// profile does not have.
+var yardTracksRE = regexp.MustCompile(`(?m)^    tracks:\n(?:      .*\n)+`)
+
 // TestStartupUpgradesAnOldProfile is the task 5.4 check: a data directory with
-// a version-1 AGS profile and a track map starts with the version-2 profile
-// active, the old files kept as .v1.bak and the labels intact.
+// a version-2 AGS profile and a track map starts with the current profile
+// active, the old files kept as .v2.bak and the labels intact.
 func TestStartupUpgradesAnOldProfile(t *testing.T) {
 	dir := t.TempDir()
 	guard := store.NewGuard()
@@ -440,12 +445,12 @@ func TestStartupUpgradesAnOldProfile(t *testing.T) {
 	}
 	pdir := filepath.Join(profiles, DefaultProfileID)
 	bundled := string(readFile(t, filepath.Join(pdir, profile.ProfileFile)))
-	cut := strings.Index(bundled, "# Run8 route data the app can import")
-	if cut < 0 || !strings.Contains(bundled, "schemaVersion: 2\n") {
-		t.Fatal("cannot build a version 1 profile from the bundled one")
+	v2 := yardTracksRE.ReplaceAllString(bundled, "")
+	if v2 == bundled || strings.Contains(v2, "tracks:\n") || !strings.Contains(v2, "schemaVersion: 3\n") {
+		t.Fatal("cannot build a version 2 profile from the bundled one")
 	}
 	old := map[string]string{
-		profile.ProfileFile:  strings.Replace(bundled[:cut], "schemaVersion: 2\n", "", 1),
+		profile.ProfileFile:  strings.Replace(v2, "schemaVersion: 3\n", "schemaVersion: 2\n", 1),
 		profile.IndustryFile: string(readFile(t, filepath.Join(pdir, profile.IndustryFile))) + "# user edit\n",
 		profile.LimitsFile:   string(readFile(t, filepath.Join(pdir, profile.LimitsFile))) + "# user edit\n",
 	}
@@ -470,8 +475,8 @@ func TestStartupUpgradesAnOldProfile(t *testing.T) {
 		t.Fatalf("profile = %s version %d run8 %v", v.Profile.ID, v.Profile.SchemaVersion, v.Profile.Run8)
 	}
 	for name, content := range old {
-		if got := string(readFile(t, filepath.Join(pdir, name+".v1.bak"))); got != content {
-			t.Errorf("%s.v1.bak = %.60q, want the old file", name, got)
+		if got := string(readFile(t, filepath.Join(pdir, name+".v2.bak"))); got != content {
+			t.Errorf("%s.v2.bak = %.60q, want the old file", name, got)
 		}
 		if got := string(readFile(t, filepath.Join(pdir, name))); got == content {
 			t.Errorf("%s was not replaced", name)

@@ -58,10 +58,17 @@ type run8EndsSchema struct {
 }
 
 type yardSchema struct {
-	Code             string   `yaml:"code"`
-	Name             string   `yaml:"name"`
-	AnchorMileposts  []string `yaml:"anchorMileposts"`
-	AnchorIndustries []string `yaml:"anchorIndustries"`
+	Code             string        `yaml:"code"`
+	Name             string        `yaml:"name"`
+	AnchorMileposts  []string      `yaml:"anchorMileposts"`
+	AnchorIndustries []string      `yaml:"anchorIndustries"`
+	Tracks           []trackSchema `yaml:"tracks"`
+}
+
+type trackSchema struct {
+	Name     string `yaml:"name"`
+	LengthFt int    `yaml:"lengthFt"`
+	Kind     string `yaml:"kind"`
 }
 
 // limitSchema overrides limits from the limits file. A nil field keeps the
