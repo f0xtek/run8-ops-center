@@ -9,7 +9,7 @@
   - Bryant to Tuscaloosa: 38 unlabelled runs. Within 6% by length, TY02, TY05, TY07, TY08 and Pass have two or three candidates each, TY01 matches only a main-line run, and TM01, TAGS and Chevron match none.
   - BRI's 25 `Config.ind` sections lie on two runs of 6,879 ft and 6,147 ft, which are MRH1 (6,645 ft, BRIP) and MRH2 (5,977 ft, BRIM). MST1 to MST4 and MCET are unlabelled.
   - Non-CTC runs near McCalla measure 5,327, 5,255, 5,059, 4,801 and 4,799 ft, against the listed MST1 5,141, MST2 4,890, MST3 4,555 and MST4 4,555 ft. Ranking puts the right group first, but not always the right track.
-  - Run8's `RCV 1` to `RCV 14` run across the receiving yard in physical order, but their names don't match the map's R01 to R12. The user chose to keep `Receiving n`.
+  - Run8's `RCV 1` to `RCV 14` run across the receiving yard in physical order. The user confirmed in the sim that `RCV 1` is the map's Receiving East Thoroughfare, where trains from the north arrive. So `RCV 2` to `RCV 13` are R12 to R01 and `RCV 14` is the Receiving West Thoroughfare (see D6).
 
 ## Goals / Non-Goals
 
@@ -37,7 +37,20 @@ yards:
 - `kind` is one of `yard` (the default), `siding` or `main`. `lengthFt` is optional; 0 or absent means unknown.
 - **Validation codes:** `invalid-track` covers an empty name, a negative length and an unknown kind. `duplicate-track` covers a name that repeats within the yard after `NormTag`. The bad entry is dropped and the rest load.
 - `profile.Yard` gains `Tracks []YardTrack{Name string; LengthFt int; Kind TrackKind}`.
-- `BundledSchemaVersion` becomes 3, so the D10 upgrade from the previous change replaces the installed AGS profile and writes `.v2.bak` backups.
+- `BundledSchemaVersion` becomes 4, so the upgrade from the previous change replaces the installed AGS profile and writes `.v<old>.bak` backups: `.v2.bak` from a release build, `.v3.bak` from an earlier build of this branch.
+
+### D6. Receiving track names
+```yaml
+trackEnds:
+  - pattern: '(?i)^Norris RCV (?P<n>\d+) (?P<end>North|South) end$'
+    yard: NOR
+    trackPrefix: Receiving
+    names: {1: Receiving East Thoroughfare, 2: R12, 3: R11, 4: R10, 5: R09, 6: R08, 7: R07, 8: R06, 9: R05, 10: R04, 11: R03, 12: R02, 13: R01, 14: Receiving West Thoroughfare}
+```
+- `profile.Run8TrackEnds` gains `Names map[int]string`. The import labels track `n` with `Names[n]`, or else with `<trackPrefix> <n>`.
+- **Validation (`invalid-run8`):** a number below 1, an empty name, or a name used twice in one rule. The bad entry is dropped and the rest of the rule loads.
+- Both receiving thoroughfares are yard tracks. Cars get parked on the East Thoroughfare, and an ignored label would drop them out of yard counts and orders. The "thoroughfares are ignored" rule covers only the other thoroughfares in the hint list.
+- **Re-import:** the 14 `run8` labels show as changed in the preview, for example `NOR / Receiving 1` becomes `NOR / Receiving East Thoroughfare`. Orders use only the yard, so they are unaffected. The dwell time of cars on those tracks restarts once, because the location key changes.
 
 ### D2. Measured length and hint ranking (`internal/trackmap`)
 - `Candidate` gains `TrackLengthFt int`, the sum of `LengthM × 3.28084` over the full switch-bounded runs of every section the train occupies, switch sections included. It is 0 without route data.
@@ -103,10 +116,10 @@ Transcribed from The Depot's maps: AGS South v04.04.2026, pages 3 to 6, and Norr
 
 - **[A transcription error puts a wrong name or length in the hints]** → The user picks from the hints and doesn't apply them blindly. Task 2.2 has a second read of every entry against a zoomed crop, and a check that the counts per yard match this table.
 - **[Map and Run8 lengths differ, so the right name ranks second or third]** → All unused names stay in the list, ordered by closeness, and both lengths are shown.
-- **[Another profile upgrade overwrites user edits]** → This was accepted in the previous change. `.v2.bak` copies are kept, and `trackmap.json` is untouched.
+- **[Another profile upgrade overwrites user edits]** → This was accepted in the previous change. `.v<old>.bak` copies are kept, and `trackmap.json` is untouched.
 - **[The siding and main rule changes a yard label to ignored]** → It applies only when the typed name exactly matches a `siding` or `main` entry of the chosen yard. The README says so.
 
 ## Migration Plan
 
-- The first start of the new binary upgrades the installed AGS profile to version 3, writing `.v2.bak` backups. Labels are untouched. Labels the user made earlier under other names stay as they are, and the hints simply offer the listed names those labels don't use.
-- **Rollback:** restore the `.v2.bak` files and run the previous binary.
+- The first start of the new binary upgrades the installed AGS profile to version 4, writing `.v<old>.bak` backups. Labels are untouched. Labels the user made earlier under other names stay as they are, and the hints simply offer the listed names those labels don't use. A re-import renames the 14 receiving labels (D6).
+- **Rollback:** restore the `.v<old>.bak` files and run the previous binary.

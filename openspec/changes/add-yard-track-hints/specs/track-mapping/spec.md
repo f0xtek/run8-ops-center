@@ -39,5 +39,20 @@ The preview SHALL group the outcome by location and show counts for each categor
 - **THEN** the preview shows `NOR / Bowl 1` with 4 track sections, its measured length and no cars there now, and lists the 4 section IDs only when the user opens them
 
 #### Scenario: Cars on an imported track
-- **WHEN** cars stand on sections the import would label `NOR / Receiving 3`
+- **WHEN** cars stand on sections the import would label `NOR / Receiving East Thoroughfare`
 - **THEN** the preview shows how many cars are there now, with a sample of their car numbers
+
+### Requirement: Receiving track labels from Run8
+For each name pattern the profile maps to a yard, the import SHALL find the pairs of AI special locations that mark the two ends of one track. It SHALL label every section on the path between the two ends as a yard track named by the profile's name for that track number, or else by its prefix and the number. A pair whose path crosses a switch or exceeds the search limit SHALL be listed as skipped.
+
+#### Scenario: Norris receiving yard
+- **WHEN** the AGS route data is imported
+- **THEN** 14 yard tracks are labelled, `NOR / Receiving East Thoroughfare` for `Norris RCV 1`, `NOR / R12` to `NOR / R01` for `Norris RCV 2` to `13`, and `NOR / Receiving West Thoroughfare` for `Norris RCV 14`, covering 120 sections, and no section is in two of them
+
+#### Scenario: End names differ in case
+- **WHEN** one end is named `Norris RCV 3 South End` and the other `Norris RCV 3 North end`
+- **THEN** both ends match and track `NOR / R11` is labelled
+
+#### Scenario: Number without a name
+- **WHEN** a profile's receiving rule has prefix `Receiving` and no name for track 15
+- **THEN** track 15 is labelled `Receiving 15`
