@@ -47,11 +47,15 @@ Opening an order SHALL show it as a switchlist. Local job orders show a set-out 
 - **THEN** only confirm and continue are offered
 
 ### Requirement: Yards and industries view
-The interface SHALL list every yard with its tracks and the cars on each. It SHALL list every industry, grouped by serving job, with its cars, service states, and occupancy against capacity for each car type.
+The interface SHALL list every yard with its tracks and the cars on each. For a yard with a track list, it SHALL also show every listed track: labelled ones with the listed length next to the measured length, and unlabelled ones marked as not labelled yet. It SHALL list every industry, grouped by serving job, with its cars, service states, and occupancy against capacity for each car type.
 
 #### Scenario: Industry occupancy
 - **WHEN** HTI has 10 Two Bay Covered Hoppers and a capacity of 24
 - **THEN** the industry shows 10/24 for that car type
+
+#### Scenario: Listed track not labelled yet
+- **WHEN** yard TUS lists TY06 and no section is labelled `TUS / TY06`
+- **THEN** the yards view shows TY06 under Tuscaloosa as not labelled yet
 
 ### Requirement: Learn mode view
 The interface SHALL provide the learn mode described by track mapping: a list of unmapped cuts with suggestions, label entry, a list of existing labels with edit and remove actions, and the import from Run8 with its preview. The preview SHALL offer confirm and cancel. Each label in the list SHALL show whether it came from an import or was set by hand.
