@@ -57,8 +57,11 @@ func walkType(t reflect.Type, path string) []string {
 }
 
 func mapKeyName(path string) string {
-	if path == "aliases" {
+	switch {
+	case path == "aliases":
 		return "tag"
+	case strings.HasSuffix(path, ".names"):
+		return "n"
 	}
 	return "type"
 }

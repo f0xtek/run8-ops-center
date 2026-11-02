@@ -54,7 +54,7 @@ Unknown keys are an error, so a misspelled field stops the load instead of being
 
 | Field | Meaning |
 |---|---|
-| `schemaVersion` | Version of the profile format. Leave it out for version 1. The app refuses a profile whose version is newer than the one it supports, and the error names both numbers. The bundled AGS profile is version 3. |
+| `schemaVersion` | Version of the profile format. Leave it out for version 1. The app refuses a profile whose version is newer than the one it supports, and the error names both numbers. The bundled AGS profile is version 4. |
 | `id` | Profile ID. Defaults to the folder name. |
 | `name` | Display name. Defaults to the ID. |
 | `defaultSaveDir` | Run8 folder that holds the world saves. |
@@ -85,7 +85,7 @@ The `kind` decides how a name is labelled.
 - `yard` is the default. The sections get the yard and track name you chose.
 - `siding` and `main` are for sidings, thoroughfares and main lines. Picking one of these names labels the sections as ignored. The app also stores a yard label as ignored when the name you type matches one of these entries. The match ignores case and extra spaces.
 
-Leave out any track that the Run8 import already names. The AGS list for `NOR` has no receiving tracks, because the import labels them `Receiving 1` to `Receiving 14`.
+Leave out any track that the Run8 import already names. The AGS list for `NOR` has no receiving tracks, because the import labels all 14 of them from the `trackEnds` rule: `Receiving East Thoroughfare`, `R12` to `R01` and `Receiving West Thoroughfare`. Both thoroughfares are yard tracks, because cars get parked on them. The other thoroughfares in the AGS list are `main` entries.
 
 ```yaml
 yards:
@@ -174,9 +174,22 @@ The `run8` block tells the app where to find the route's binary data files under
 | `run8.humps[].trackPrefix` | Word that starts the label of each bowl track, for example `Bowl`, which gives `NOR / Bowl 1`. |
 | `run8.trackEnds[].pattern` | Regular expression that matches the names of the special locations at the two ends of a numbered track. It needs the named groups `n` for the track number and `end` for `North` or `South`. The app uses the pattern as written, so start it with `(?i)` to ignore case. |
 | `run8.trackEnds[].yard` | Code of the yard the tracks belong to. |
-| `run8.trackEnds[].trackPrefix` | Word that starts the label of each track, for example `Receiving`, which gives `NOR / Receiving 1`. |
+| `run8.trackEnds[].trackPrefix` | Word that starts the label of a track that has no entry in `names`, for example `Receiving`, which gives `NOR / Receiving 15` for track 15. |
+| `run8.trackEnds[].names.<n>` | Name for track number `<n>`. The label becomes the yard code and this name, for example `NOR / R12`. Numbers start at 1. Names must be unique within the rule, ignoring case and extra spaces. |
 
 Every folder name must be a single name. A name that is empty, absolute, or contains a path separator, a drive colon or `..` is rejected, so the profile can never point the app outside the Run8 install folder. The app drops each invalid entry and reports it. A hump or `trackEnds` entry that names an unknown yard is dropped and reported.
+
+The AGS profile gives the 14 Norris receiving tracks these names, matching what Run8 calls `RCV 1` to `RCV 14`:
+
+```yaml
+trackEnds:
+  - pattern: '(?i)^Norris RCV (?P<n>\d+) (?P<end>North|South) end$'
+    yard: NOR
+    trackPrefix: Receiving
+    names: {1: Receiving East Thoroughfare, 2: R12, 3: R11, 4: R10, 5: R09, 6: R08, 7: R07, 8: R06, 9: R05, 10: R04, 11: R03, 12: R02, 13: R01, 14: Receiving West Thoroughfare}
+```
+
+When a profile adds or changes `names`, the next import shows the renamed tracks as changed labels. Orders use only the yard, so they do not change. The cars on a renamed track start a new dwell time, because the location key changes.
 
 ## Validation report
 
@@ -191,7 +204,7 @@ Loading a profile never fails because of a validation problem. The loader loads 
 | `duplicate-tag` | An incoming tag, job ID, train symbol or class code used twice, or an outgoing tag listed twice in one row. |
 | `unmapped-car-type` | An industry car type that no `carTypes` rule produces. |
 | `unmatched-model` | A car model in a save that matches no `carTypes` rule. This code comes from checking a save's models against the profile, not from loading. |
-| `invalid-run8` | A `run8` entry the app dropped: a region or folder name that is empty, absolute or contains a separator or `..`, a route prefix that is missing from `routePrefixes`, a hump with no controller name, or a `trackEnds` pattern that does not compile or lacks the `n` and `end` groups. |
+| `invalid-run8` | A `run8` entry the app dropped: a region or folder name that is empty, absolute or contains a separator or `..`, a route prefix that is missing from `routePrefixes`, a hump with no controller name, a `trackEnds` pattern that does not compile or lacks the `n` and `end` groups, or a `trackEnds` name for a number below 1, an empty name, or a name that a lower number of the same rule already uses. A bad name leaves the rest of its rule in place. |
 | `unmatched-anchor` | A yard `anchorMileposts` name that matches no milepost station name. The app reports it after it reads the route data, so it appears in the report only then. |
 | `invalid-track` | A yard `tracks` entry the app dropped because its name is empty, its length is negative or its kind is not `yard`, `siding` or `main`. The rest of the yard still loads. |
 | `duplicate-track` | A yard `tracks` entry the app dropped because an earlier entry in the same yard has the same name. Names match after whitespace is collapsed and case is ignored. The first entry stays. |

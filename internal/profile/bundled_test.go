@@ -147,6 +147,7 @@ func TestInstallBundledUpgradesOlderProfile(t *testing.T) {
 		{"", 1},
 		{"schemaVersion: 1\n", 1},
 		{"schemaVersion: 2\n", 2},
+		{"schemaVersion: 3\n", 3},
 	} {
 		header := tc.header
 		bak := fmt.Sprintf(".v%d.bak", tc.old)
@@ -338,6 +339,20 @@ func TestBundledRun8Config(t *testing.T) {
 	te := r.TrackEnds[0]
 	if te.Yard != "NOR" || te.TrackPrefix != "Receiving" {
 		t.Errorf("TrackEnds[0] = %+v", te)
+	}
+	if len(te.Names) != 14 {
+		t.Errorf("%d receiving names, want 14: %v", len(te.Names), te.Names)
+	}
+	for n, want := range map[int]string{
+		1: "Receiving East Thoroughfare", 2: "R12", 3: "R11", 4: "R10", 5: "R09", 6: "R08", 7: "R07",
+		8: "R06", 9: "R05", 10: "R04", 11: "R03", 12: "R02", 13: "R01", 14: "Receiving West Thoroughfare",
+	} {
+		if got := te.Names[n]; got != want {
+			t.Errorf("Names[%d] = %q, want %q", n, got, want)
+		}
+	}
+	if got := problemsOf(p, CodeInvalidRun8); len(got) != 0 {
+		t.Errorf("invalid-run8 problems: %+v", got)
 	}
 	for name, wantEnd := range map[string]string{
 		"Norris RCV 3 South End":  "South",

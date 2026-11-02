@@ -52,9 +52,10 @@ type run8HumpSchema struct {
 }
 
 type run8EndsSchema struct {
-	Pattern     string `yaml:"pattern"`
-	Yard        string `yaml:"yard"`
-	TrackPrefix string `yaml:"trackPrefix"`
+	Pattern     string         `yaml:"pattern"`
+	Yard        string         `yaml:"yard"`
+	TrackPrefix string         `yaml:"trackPrefix"`
+	Names       map[int]string `yaml:"names"`
 }
 
 type yardSchema struct {

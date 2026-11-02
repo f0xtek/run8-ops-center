@@ -372,6 +372,74 @@ func TestDiffChangedLabel(t *testing.T) {
 	}
 }
 
+func TestBuildImportReceivingNames(t *testing.T) {
+	res := synthRoute(t)
+	p := synthProfile()
+	p.Run8.TrackEnds[0].Names = map[int]string{1: "East Thoroughfare", 2: "R12", 99: "Unused"}
+	plan := BuildImport(res.Data, p)
+
+	if got := sectionsWhere(plan.Labels, trackIs("East Thoroughfare")); !reflect.DeepEqual(got, []int{300, 301, 302}) {
+		t.Errorf("East Thoroughfare = %v", got)
+	}
+	if got := sectionsWhere(plan.Labels, trackIs("R12")); !reflect.DeepEqual(got, []int{310, 311}) {
+		t.Errorf("R12 = %v", got)
+	}
+	if got := sectionsWhere(plan.Labels, func(l Label) bool { return strings.HasPrefix(l.Track, "Receiving ") }); len(got) != 0 {
+		t.Errorf("sections still labelled Receiving n: %v", got)
+	}
+	if l := plan.Labels[sec(301)]; l.Kind != KindYard || l.Yard != "NOR" || l.Source != SourceRun8 {
+		t.Errorf("301 = %+v", l)
+	}
+
+	// Tracks 3 and 4 have no name, so they fall back to the prefix and the number.
+	if _, ok := skipFor(plan.Skipped, "NOR / East Thoroughfare"); ok {
+		t.Error("a named track that imported cleanly was skipped")
+	}
+	for _, who := range []string{"NOR / Receiving 3", "NOR / Receiving 4"} {
+		if _, ok := skipFor(plan.Skipped, who); !ok {
+			t.Errorf("no skip for the unnamed number %q: %+v", who, plan.Skipped)
+		}
+	}
+	// A skip for a named track uses its name too.
+	d := res.Data
+	d.Locations = slices.Clone(d.Locations)
+	d.Locations = append(d.Locations, run8route.SpecialLocation{
+		Name: "Norris RCV 2 South end", Type: 1, Prefix: run8routetest.Prefix, Section: run8routetest.SecMainWestEnd,
+	})
+	if _, ok := skipFor(BuildImport(d, p).Skipped, "NOR / R12"); !ok {
+		t.Errorf("a skipped named track is not reported by its name")
+	}
+}
+
+func TestReimportRenamesReceivingTracks(t *testing.T) {
+	res := synthRoute(t)
+	p := synthProfile()
+	m := New()
+	m.ApplyImport(m.Diff(BuildImport(res.Data, p)), res.Fingerprint, importTime)
+	if l, _ := m.Lookup(280, 301); l.Track != "Receiving 1" {
+		t.Fatalf("301 = %+v", l)
+	}
+
+	p.Run8.TrackEnds[0].Names = map[int]string{1: "East Thoroughfare", 2: "R12"}
+	d := m.Diff(BuildImport(res.Data, p))
+	if len(d.New)+len(d.Removed) != 0 || len(d.Changed) != 5 {
+		t.Fatalf("new %d, changed %d, removed %d", len(d.New), len(d.Changed), len(d.Removed))
+	}
+	changed := 0
+	for _, g := range d.Groups() {
+		if len(g.Changed) > 0 {
+			changed++
+		}
+	}
+	if changed != 2 {
+		t.Errorf("%d changed locations, want 2", changed)
+	}
+	m.ApplyImport(d, res.Fingerprint, importTime)
+	if l, _ := m.Lookup(280, 301); l.Track != "East Thoroughfare" || l.Source != SourceRun8 {
+		t.Errorf("301 = %+v", l)
+	}
+}
+
 func TestManualLabelsUntouchedByReimport(t *testing.T) {
 	res := synthRoute(t)
 	p := synthProfile()

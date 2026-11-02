@@ -61,7 +61,7 @@ func (y *Yard) TrackByName(name string) (YardTrack, bool) {
 
 // BundledSchemaVersion is the profile.yaml schemaVersion of the profile
 // embedded in this binary. Load refuses a profile with a newer version.
-const BundledSchemaVersion = 3
+const BundledSchemaVersion = 4
 
 // Run8Route is a Run8 route folder and the track section prefix it covers.
 type Run8Route struct {
@@ -78,11 +78,13 @@ type Run8Hump struct {
 
 // Run8TrackEnds maps special locations whose name matches Pattern to a yard
 // and a track name prefix. Pattern has the named groups n (track number) and
-// end (which end of the track).
+// end (which end of the track). Names gives track numbers a name of their own;
+// a number without one is named TrackPrefix and the number.
 type Run8TrackEnds struct {
 	Pattern     *regexp.Regexp
 	Yard        string // yard code
 	TrackPrefix string // "Receiving"
+	Names       map[int]string
 }
 
 // Run8Config names the Run8 route data a profile reads. Entries that failed

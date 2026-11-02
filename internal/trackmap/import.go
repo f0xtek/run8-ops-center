@@ -6,6 +6,7 @@ import (
 	"regexp"
 	"slices"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -178,6 +179,17 @@ func trackName(prefix, name string) string {
 	return strings.TrimSpace(prefix + " " + strings.TrimSpace(name))
 }
 
+// receivingName names track n of a trackEnds rule: the profile's name for the
+// number, or else the rule's prefix and the number as written.
+func receivingName(te profile.Run8TrackEnds, n string) string {
+	if num, err := strconv.Atoi(n); err == nil {
+		if name, ok := te.Names[num]; ok {
+			return name
+		}
+	}
+	return trackName(te.TrackPrefix, n)
+}
+
 // bowls claims each hump controller track's sections. A track runs from the
 // last switch of its path, along the leg the path selects, to the next switch
 // or the end of the track.
@@ -287,7 +299,7 @@ func (b *builder) receiving(d run8route.Data, p *profile.Profile, prefix int) {
 		}
 		for _, n := range order {
 			e := byN[n]
-			name := trackName(te.TrackPrefix, n)
+			name := receivingName(te, n)
 			who := te.Yard + " / " + name
 			switch {
 			case len(e.north) == 0 && len(e.south) == 0:

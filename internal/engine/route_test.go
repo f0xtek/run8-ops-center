@@ -3,6 +3,7 @@ package engine
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io/fs"
 	"math"
 	"os"
@@ -432,13 +433,23 @@ func TestRun8StateFollowsTheFiles(t *testing.T) {
 }
 
 // yardTracksRE matches the `tracks:` block of a bundled yard, which a version-2
-// profile does not have.
-var yardTracksRE = regexp.MustCompile(`(?m)^    tracks:\n(?:      .*\n)+`)
+// profile does not have. receivingNamesRE matches the `names:` line of the
+// receiving rule, which a profile before version 4 does not have.
+var (
+	yardTracksRE     = regexp.MustCompile(`(?m)^    tracks:\n(?:      .*\n)+`)
+	receivingNamesRE = regexp.MustCompile(`(?m)^      names: .*\n`)
+)
 
 // TestStartupUpgradesAnOldProfile is the task 5.4 check: a data directory with
-// a version-2 AGS profile and a track map starts with the current profile
-// active, the old files kept as .v2.bak and the labels intact.
+// a version-2 or version-3 AGS profile and a track map starts with the current
+// profile active, the old files kept as .v<old>.bak and the labels intact.
 func TestStartupUpgradesAnOldProfile(t *testing.T) {
+	for _, old := range []int{2, 3} {
+		t.Run(fmt.Sprintf("v%d", old), func(t *testing.T) { upgradesAnOldProfile(t, old) })
+	}
+}
+
+func upgradesAnOldProfile(t *testing.T, version int) {
 	dir := t.TempDir()
 	guard := store.NewGuard()
 	profiles := filepath.Join(dir, profilesDirName)
@@ -447,12 +458,22 @@ func TestStartupUpgradesAnOldProfile(t *testing.T) {
 	}
 	pdir := filepath.Join(profiles, DefaultProfileID)
 	bundled := string(readFile(t, filepath.Join(pdir, profile.ProfileFile)))
-	v2 := yardTracksRE.ReplaceAllString(bundled, "")
-	if v2 == bundled || strings.Contains(v2, "tracks:\n") || !strings.Contains(v2, "schemaVersion: 3\n") {
-		t.Fatal("cannot build a version 2 profile from the bundled one")
+	body := receivingNamesRE.ReplaceAllString(bundled, "")
+	if body == bundled {
+		t.Fatal("cannot build a version 3 profile from the bundled one")
+	}
+	if version == 2 {
+		body = yardTracksRE.ReplaceAllString(body, "")
+		if strings.Contains(body, "tracks:\n") {
+			t.Fatal("cannot build a version 2 profile from the bundled one")
+		}
+	}
+	current := fmt.Sprintf("schemaVersion: %d\n", profile.BundledSchemaVersion)
+	if !strings.Contains(body, current) {
+		t.Fatalf("the bundled profile lacks %q", current)
 	}
 	old := map[string]string{
-		profile.ProfileFile:  strings.Replace(v2, "schemaVersion: 3\n", "schemaVersion: 2\n", 1),
+		profile.ProfileFile:  strings.Replace(body, current, fmt.Sprintf("schemaVersion: %d\n", version), 1),
 		profile.IndustryFile: string(readFile(t, filepath.Join(pdir, profile.IndustryFile))) + "# user edit\n",
 		profile.LimitsFile:   string(readFile(t, filepath.Join(pdir, profile.LimitsFile))) + "# user edit\n",
 	}
@@ -476,9 +497,13 @@ func TestStartupUpgradesAnOldProfile(t *testing.T) {
 	if v.Profile.ID != DefaultProfileID || v.Profile.SchemaVersion != profile.BundledSchemaVersion || v.Profile.Run8 == nil {
 		t.Fatalf("profile = %s version %d run8 %v", v.Profile.ID, v.Profile.SchemaVersion, v.Profile.Run8)
 	}
+	if names := v.Profile.Run8.TrackEnds[0].Names; len(names) != 14 {
+		t.Errorf("the upgraded profile has %d receiving names, want 14", len(names))
+	}
+	bak := fmt.Sprintf(".v%d.bak", version)
 	for name, content := range old {
-		if got := string(readFile(t, filepath.Join(pdir, name+".v2.bak"))); got != content {
-			t.Errorf("%s.v2.bak = %.60q, want the old file", name, got)
+		if got := string(readFile(t, filepath.Join(pdir, name+bak))); got != content {
+			t.Errorf("%s%s = %.60q, want the old file", name, bak, got)
 		}
 		if got := string(readFile(t, filepath.Join(pdir, name))); got == content {
 			t.Errorf("%s was not replaced", name)
@@ -523,9 +548,9 @@ func TestViewMeasuresYardLocationsFromRouteData(t *testing.T) {
 		return trackmap.Location{Kind: trackmap.KindYard, Yard: "NOR", Track: track}.Key()
 	}
 	v := h.eng.View()
-	// RCV 1 is sections 300, 301 and 302; the import names it "Receiving 1".
-	if got, want := v.LocationFt[key("Receiving 1")], feet(300, 301, 302); got != want || want < 500 {
-		t.Errorf("Receiving 1 measures %d ft, want %d", got, want)
+	// RCV 1 is sections 300, 301 and 302; the bundled profile names it "Receiving East Thoroughfare".
+	if got, want := v.LocationFt[key("Receiving East Thoroughfare")], feet(300, 301, 302); got != want || want < 500 {
+		t.Errorf("Receiving East Thoroughfare measures %d ft, want %d", got, want)
 	}
 	for k := range v.LocationFt {
 		if !strings.HasPrefix(k, "yard|") {

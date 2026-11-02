@@ -62,7 +62,7 @@ At first start the app does not know where any car is. A world save records trac
 2. Press Preview the import. The preview changes nothing. It counts the new labels, the changed labels, the removed labels, the sections that keep a label you made by hand, and the skipped items, with a reason for each skipped item. It lists the locations one by one, and you open a location to see its sections.
 3. Press Confirm the import to save the labels, or Cancel to leave the track map as it was. If a Run8 file or a label changed after you opened the preview, the app refuses to confirm and asks you to review a new preview.
 
-For AGS the import labels the industry tracks from `Config.ind`, the Norris hump bowl tracks `NOR / Bowl 1` to `NOR / Bowl 56`, and the Norris receiving tracks `NOR / Receiving 1` to `NOR / Receiving 14`. The Labelled sections list marks each imported section with an "imported" tag. An import never changes a label you made by hand. If you relabel an imported section, it becomes a manual label and later imports leave it alone.
+For AGS the import labels the industry tracks from `Config.ind`, the Norris hump bowl tracks `NOR / Bowl 1` to `NOR / Bowl 56`, and the 14 Norris receiving tracks, which Run8 calls `RCV 1` to `RCV 14`. The profile names them as the map does: `NOR / Receiving East Thoroughfare` for `RCV 1`, `NOR / R12` down to `NOR / R01` for `RCV 2` to `RCV 13`, and `NOR / Receiving West Thoroughfare` for `RCV 14`. Both thoroughfares are yard tracks, because cars get parked on them. A profile that names no track for a number uses the prefix and the number, such as `NOR / Receiving 15`. The Labelled sections list marks each imported section with an "imported" tag. An import never changes a label you made by hand. If you relabel an imported section, it becomes a manual label and later imports leave it alone.
 
 The dashboard attention list tells you when an import is available, when the Run8 track data changed since your last import, and when a route file could not be used. Each item links to the import card. After a Run8 update or a swap of the industry file, preview a new import to pick up the changes.
 
@@ -83,7 +83,7 @@ The labels live in the profile folder and survive restarts. You only label a tra
 
 ### Track name hints
 
-A yard in the profile can list its tracks with a name, a length in feet and a kind. The bundled AGS profile lists the tracks that Run8 does not name, taken from The Depot's AGS South and Norris Yard maps. These are the Norris forwarding, local, shop and engine tracks, and the tracks at 32nd St, Tuscaloosa, Bessemer and McCalla. The lists hold names and lengths only. They leave out the Norris receiving tracks, because the import names those `Receiving 1` to `Receiving 14`.
+A yard in the profile can list its tracks with a name, a length in feet and a kind. The bundled AGS profile lists the tracks that Run8 does not name, taken from The Depot's AGS South and Norris Yard maps. These are the Norris forwarding, local, shop and engine tracks, and the tracks at 32nd St, Tuscaloosa, Bessemer and McCalla. The lists hold names and lengths only. They leave out the 14 Norris receiving tracks, because the import names those.
 
 1. In the label form, choose the yard. The track name field then offers that yard's listed tracks. Nothing is filled in until you pick or type a name, and you can type any name.
 2. A name that a labelled section already uses in that yard is not offered again.
@@ -96,7 +96,9 @@ The Yards page shows a Listed tracks table for each yard that has a list. It giv
 
 ### Profile upgrade
 
-The import needs the version 2 AGS profile, which adds the Run8 folders, the hump and receiving-track rules and the yard anchors. Version 3 adds the yard track lists behind the track name hints. When a newer bundled profile ships, the app upgrades the installed one at the next start. For each of `IndustryConfiguration.csv`, `train_limits.tsv` and `profile.yaml`, it saves the installed file as `<name>.v<old>.bak` and then writes the bundled file. An installed profile with the same or a newer version is left alone. The app never touches `trackmap.json`, so your labels stay. If you edited one of the three files, copy your changes back from the `.bak` copy by hand. To go back to the old profile, restore the `.bak` files.
+The import needs the version 2 AGS profile, which adds the Run8 folders, the hump and receiving-track rules and the yard anchors. Version 3 adds the yard track lists behind the track name hints. Version 4 adds the names of the 14 receiving tracks. When a newer bundled profile ships, the app upgrades the installed one at the next start. For each of `IndustryConfiguration.csv`, `train_limits.tsv` and `profile.yaml`, it saves the installed file as `<name>.v<old>.bak` and then writes the bundled file. An installed profile with the same or a newer version is left alone. The app never touches `trackmap.json`, so your labels stay. If you edited one of the three files, copy your changes back from the `.bak` copy by hand. To go back to the old profile, restore the `.bak` files.
+
+If you imported before the upgrade, the next import previews the 14 receiving labels as changed, for example `NOR / Receiving 1` becomes `NOR / Receiving East Thoroughfare`. Orders use only the yard, so they do not change. The cars on those tracks start a new dwell time once, because the track name is part of the location key.
 
 ## Orders
 

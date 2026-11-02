@@ -5,7 +5,7 @@
 # folder. Edit this file freely. When a new version of the app ships a newer
 # schemaVersion, it replaces this file and keeps your old copy as
 # profile.yaml.v<old>.bak.
-schemaVersion: 3
+schemaVersion: 4
 id: ags-south-p1
 name: AGS South Phase 1 (NS Birmingham)
 
@@ -18,7 +18,8 @@ defaultAutoSaveDir: 'C:\Run8Studios\Run8 Train Simulator V3\Content\V3Routes\Reg
 # maps, as names and lengths only. Learn mode offers the names as hints, and the
 # yards view shows which ones are not labelled yet. A siding or main entry
 # labels its sections as ignored. Norris receiving is left out, because the Run8
-# import names those tracks Receiving 1 to Receiving 14.
+# import names those tracks: the 14 receiving tracks, including the two
+# thoroughfares, come from the trackEnds rule at the end of this file.
 yards:
   - code: NOR
     name: Norris
@@ -348,3 +349,7 @@ run8:
     - pattern: '(?i)^Norris RCV (?P<n>\d+) (?P<end>North|South) end$'
       yard: NOR
       trackPrefix: Receiving
+      # Names by track number. RCV 1 is the Receiving East Thoroughfare, RCV 2
+      # to 13 are R12 to R01 across the yard, and RCV 14 is the Receiving West
+      # Thoroughfare. A number left out is named "<trackPrefix> <number>".
+      names: {1: Receiving East Thoroughfare, 2: R12, 3: R11, 4: R10, 5: R09, 6: R08, 7: R07, 8: R06, 9: R05, 10: R04, 11: R03, 12: R02, 13: R01, 14: Receiving West Thoroughfare}

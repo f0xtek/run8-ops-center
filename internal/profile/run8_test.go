@@ -173,6 +173,64 @@ run8:
 	}
 }
 
+func TestRun8TrackEndNamesLoad(t *testing.T) {
+	p := loadMini(t, `
+run8:
+  region: Coast
+  trackEnds:
+    - pattern: '^R (?P<n>\d+) (?P<end>N|S)$'
+      yard: HOM
+      trackPrefix: Rcv
+      names: {1: East  Thoroughfare, 2: R12}
+    - {pattern: '^Q (?P<n>\d+) (?P<end>N|S)$', yard: HOM, trackPrefix: Q}
+`)
+	if got := problemsOf(p, CodeInvalidRun8); len(got) != 0 {
+		t.Fatalf("problems: %+v", got)
+	}
+	if len(p.Run8.TrackEnds) != 2 {
+		t.Fatalf("TrackEnds = %+v", p.Run8.TrackEnds)
+	}
+	if want := map[int]string{1: "East Thoroughfare", 2: "R12"}; !reflect.DeepEqual(p.Run8.TrackEnds[0].Names, want) {
+		t.Errorf("Names = %v, want %v (whitespace collapsed)", p.Run8.TrackEnds[0].Names, want)
+	}
+	if p.Run8.TrackEnds[1].Names != nil {
+		t.Errorf("a rule without names has Names = %v", p.Run8.TrackEnds[1].Names)
+	}
+}
+
+func TestRun8TrackEndBadNamesAreDropped(t *testing.T) {
+	p := loadMini(t, `
+run8:
+  region: Coast
+  trackEnds:
+    - pattern: '^R (?P<n>\d+) (?P<end>N|S)$'
+      yard: HOM
+      trackPrefix: Rcv
+      names: {0: Zero, -3: Negative, 1: Good, 2: "", 3: "  ", 4: Good, 5: GOOD, 6: Other}
+`)
+	if len(p.Run8.TrackEnds) != 1 {
+		t.Fatalf("TrackEnds = %+v", p.Run8.TrackEnds)
+	}
+	if want := map[int]string{1: "Good", 6: "Other"}; !reflect.DeepEqual(p.Run8.TrackEnds[0].Names, want) {
+		t.Errorf("Names = %v, want %v", p.Run8.TrackEnds[0].Names, want)
+	}
+	got := problemsOf(p, CodeInvalidRun8)
+	if len(got) != 6 {
+		t.Fatalf("%d problems, want 6 (below 1 twice, empty twice, repeated twice): %+v", len(got), got)
+	}
+	for _, want := range []string{"below 1", "empty name", "more than once"} {
+		var n int
+		for _, pr := range got {
+			if strings.Contains(pr.Message, want) {
+				n++
+			}
+		}
+		if n != 2 {
+			t.Errorf("%d problems mention %q, want 2: %+v", n, want, got)
+		}
+	}
+}
+
 func TestAnchorIndustriesMustBeProfileIndustries(t *testing.T) {
 	p, err := Load(writeProfile(t, strings.Replace(miniYAML,
 		"  - {code: HOM, name: Home}",

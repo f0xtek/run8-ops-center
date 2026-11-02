@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"regexp"
 	"slices"
 	"strings"
 	"testing"
@@ -98,38 +99,96 @@ func TestRealIndustryLabels(t *testing.T) {
 
 func TestRealBowlAndReceivingLabels(t *testing.T) {
 	res, p, _ := realRoute(t)
+	rNN := regexp.MustCompile(`^R\d\d$`)
 	plan := BuildImport(res.Data, p)
 
-	count := func(prefix string, n int) {
-		t.Helper()
-		names := map[string]bool{}
-		sections := 0
-		for _, l := range plan.Labels {
-			if l.Kind == KindYard && l.Yard == "NOR" && strings.HasPrefix(l.Track, prefix+" ") {
-				names[l.Track] = true
-				sections++
-			}
+	bowls := map[string]bool{}
+	bowlSections := 0
+	receiving := map[string]int{}
+	for _, l := range plan.Labels {
+		if l.Kind != KindYard || l.Yard != "NOR" {
+			continue
 		}
-		for i := 1; i <= n; i++ {
-			if want := fmt.Sprintf("%s %d", prefix, i); !names[want] {
-				t.Errorf("no track %s / %s", "NOR", want)
-			}
-		}
-		if len(names) != n {
-			t.Errorf("%s: %d tracks, want %d", prefix, len(names), n)
-		}
-		t.Logf("%s: %d tracks, %d sections", prefix, len(names), sections)
-		want := map[string]int{"Bowl": 336, "Receiving": 120}[prefix]
-		if sections != want {
-			t.Errorf("%s covers %d sections, want %d", prefix, sections, want)
+		if strings.HasPrefix(l.Track, "Bowl ") {
+			bowls[l.Track] = true
+			bowlSections++
+		} else if strings.HasPrefix(l.Track, "Receiving ") || rNN.MatchString(l.Track) {
+			receiving[l.Track]++
 		}
 	}
-	count("Bowl", 56)
-	count("Receiving", 14)
+	for i := 1; i <= 56; i++ {
+		if want := fmt.Sprintf("Bowl %d", i); !bowls[want] {
+			t.Errorf("no track NOR / %s", want)
+		}
+	}
+	if len(bowls) != 56 || bowlSections != 336 {
+		t.Errorf("Bowl: %d tracks, %d sections, want 56 and 336", len(bowls), bowlSections)
+	}
+
+	// Run8's RCV 1 to 14 take the names the profile gives them: the east
+	// thoroughfare, R12 down to R01, then the west thoroughfare.
+	want := []string{"Receiving East Thoroughfare"}
+	for i := 12; i >= 1; i-- {
+		want = append(want, fmt.Sprintf("R%02d", i))
+	}
+	want = append(want, "Receiving West Thoroughfare")
+	sections := 0
+	for _, name := range want {
+		n, ok := receiving[name]
+		if !ok {
+			t.Errorf("no track NOR / %s", name)
+		}
+		sections += n
+	}
+	if len(receiving) != 14 || sections != 120 {
+		t.Errorf("receiving: %d tracks (%v), %d sections, want 14 and 120", len(receiving), receiving, sections)
+	}
 
 	// No section is claimed twice, and nothing about the yard tracks is skipped.
 	for _, sk := range plan.Skipped {
 		t.Errorf("skipped: %+v", sk)
+	}
+}
+
+// TestRealReimportOverOldReceivingNames checks that a map imported under the
+// old "Receiving n" names previews exactly the 14 receiving tracks as changed.
+func TestRealReimportOverOldReceivingNames(t *testing.T) {
+	res, p, _ := realRoute(t)
+	old := *p
+	oldRun8 := *p.Run8
+	oldRun8.TrackEnds = slices.Clone(p.Run8.TrackEnds)
+	oldRun8.TrackEnds[0].Names = nil
+	old.Run8 = &oldRun8
+
+	m := New()
+	m.ApplyImport(m.Diff(BuildImport(res.Data, &old)), res.Fingerprint, importTime)
+	if _, ok := m.Lookup(280, 8905); !ok {
+		t.Fatal("the old import labelled no receiving section")
+	}
+
+	d := m.Diff(BuildImport(res.Data, p))
+	if len(d.New)+len(d.Removed)+len(d.KeptManual) != 0 {
+		t.Errorf("new %d, removed %d, kept %d, want none", len(d.New), len(d.Removed), len(d.KeptManual))
+	}
+	changed := map[string]string{}
+	for _, g := range d.Groups() {
+		if len(g.Changed) == 0 {
+			continue
+		}
+		changed[g.Changed[0].Old.Track] = g.Location.Track
+		if len(g.Unchanged) != 0 {
+			t.Errorf("%s is partly changed", g.Location.Track)
+		}
+	}
+	if len(changed) != 14 || len(d.Changed) != 120 {
+		t.Fatalf("%d changed locations over %d sections, want 14 over 120: %v", len(changed), len(d.Changed), changed)
+	}
+	for old, name := range map[string]string{
+		"Receiving 1": "Receiving East Thoroughfare", "Receiving 2": "R12", "Receiving 13": "R01", "Receiving 14": "Receiving West Thoroughfare",
+	} {
+		if changed[old] != name {
+			t.Errorf("%s becomes %q, want %q", old, changed[old], name)
+		}
 	}
 }
 
