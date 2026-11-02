@@ -140,7 +140,17 @@ func snapshotDir(t *testing.T, dir string) map[string]string {
 }
 
 func TestInstallBundledUpgradesOlderProfile(t *testing.T) {
-	for _, header := range []string{"", "schemaVersion: 1\n"} {
+	for _, tc := range []struct {
+		header string
+		old    int
+	}{
+		{"", 1},
+		{"schemaVersion: 1\n", 1},
+		{"schemaVersion: 2\n", 2},
+		{"schemaVersion: 3\n", 3},
+	} {
+		header := tc.header
+		bak := fmt.Sprintf(".v%d.bak", tc.old)
 		o := installOld(t, header)
 		w := &recordingWriter{}
 		if err := InstallBundled(w, filepath.Dir(o.dir)); err != nil {
@@ -152,9 +162,9 @@ func TestInstallBundledUpgradesOlderProfile(t *testing.T) {
 			wrote = append(wrote, filepath.Base(p))
 		}
 		wantOrder := []string{
-			IndustryFile + ".v1.bak", IndustryFile,
-			LimitsFile + ".v1.bak", LimitsFile,
-			ProfileFile + ".v1.bak", ProfileFile,
+			IndustryFile + bak, IndustryFile,
+			LimitsFile + bak, LimitsFile,
+			ProfileFile + bak, ProfileFile,
 		}
 		if !reflect.DeepEqual(wrote, wantOrder) {
 			t.Errorf("header %q: write order = %v, want %v", header, wrote, wantOrder)
@@ -169,8 +179,8 @@ func TestInstallBundledUpgradesOlderProfile(t *testing.T) {
 			if got[name] != string(fresh) {
 				t.Errorf("%s was not replaced by the bundled file", name)
 			}
-			if got[name+".v1.bak"] != o.files[name] {
-				t.Errorf("%s.v1.bak = %q, want the old file %q", name, got[name+".v1.bak"], o.files[name])
+			if got[name+bak] != o.files[name] {
+				t.Errorf("%s%s = %q, want the old file %q", name, bak, got[name+bak], o.files[name])
 			}
 		}
 		for _, name := range []string{"trackmap.json", "notes-by-user"} {
@@ -258,7 +268,7 @@ func TestInstallBundledMissingProfileYAMLWritesNothing(t *testing.T) {
 }
 
 func TestInstallBundledInterruptedUpgradeCompletesAtNextRun(t *testing.T) {
-	o := installOld(t, "")
+	o := installOld(t, "schemaVersion: 2\n")
 	profiles := filepath.Dir(o.dir)
 
 	// The upgrade fails before profile.yaml is replaced.
@@ -285,8 +295,8 @@ func TestInstallBundledInterruptedUpgradeCompletesAtNextRun(t *testing.T) {
 		if got[name] != string(fresh) {
 			t.Errorf("%s not upgraded", name)
 		}
-		if got[name+".v1.bak"] != o.files[name] {
-			t.Errorf("%s.v1.bak = %q, want the user's original %q", name, got[name+".v1.bak"], o.files[name])
+		if got[name+".v2.bak"] != o.files[name] {
+			t.Errorf("%s.v2.bak = %q, want the user's original %q", name, got[name+".v2.bak"], o.files[name])
 		}
 	}
 	if got["trackmap.json"] != o.files["trackmap.json"] {
@@ -329,6 +339,20 @@ func TestBundledRun8Config(t *testing.T) {
 	te := r.TrackEnds[0]
 	if te.Yard != "NOR" || te.TrackPrefix != "Receiving" {
 		t.Errorf("TrackEnds[0] = %+v", te)
+	}
+	if len(te.Names) != 14 {
+		t.Errorf("%d receiving names, want 14: %v", len(te.Names), te.Names)
+	}
+	for n, want := range map[int]string{
+		1: "Receiving East Thoroughfare", 2: "R12", 3: "R11", 4: "R10", 5: "R09", 6: "R08", 7: "R07",
+		8: "R06", 9: "R05", 10: "R04", 11: "R03", 12: "R02", 13: "R01", 14: "Receiving West Thoroughfare",
+	} {
+		if got := te.Names[n]; got != want {
+			t.Errorf("Names[%d] = %q, want %q", n, got, want)
+		}
+	}
+	if got := problemsOf(p, CodeInvalidRun8); len(got) != 0 {
+		t.Errorf("invalid-run8 problems: %+v", got)
 	}
 	for name, wantEnd := range map[string]string{
 		"Norris RCV 3 South End":  "South",

@@ -53,11 +53,15 @@ type Candidate struct {
 	// each switch-bounded track the train occupies, plus the switch sections
 	// it occupies. It includes Sections. Without route data it equals
 	// Sections.
-	Track      []SectionRef
-	Cars       int         // non-locomotive vehicles
-	Samples    []string    // up to 5 unit numbers (cars; locomotives when it has no cars)
-	Tags       []TagCount  // distinct non-blank car tags, most common first
-	Suggestion *Suggestion // nil when there is nothing to suggest
+	Track []SectionRef
+	// TrackLengthFt is the measured length in feet of the switch-bounded
+	// tracks the train occupies, labelled sections and switch sections
+	// included. It is 0 without route data.
+	TrackLengthFt int
+	Cars          int         // non-locomotive vehicles
+	Samples       []string    // up to 5 unit numbers (cars; locomotives when it has no cars)
+	Tags          []TagCount  // distinct non-blank car tags, most common first
+	Suggestion    *Suggestion // nil when there is nothing to suggest
 }
 
 // routeCtx is the route data a candidate search can use: the track graph of
@@ -164,6 +168,7 @@ func (m *Map) Candidates(snap *run8save.Snapshot, p *profile.Profile, route *run
 			Sections: secs,
 			Track:    m.wholeTrack(secs, rc),
 		}
+		c.TrackLengthFt = measuredFt(secs, rc)
 		var cars, locos []run8save.Vehicle
 		for _, v := range t.Vehicles {
 			if v.IsLoco() {
@@ -227,6 +232,35 @@ func (m *Map) wholeTrack(occupied []SectionRef, rc *routeCtx) []SectionRef {
 	}
 	sortSections(out)
 	return out
+}
+
+// metresToFeet converts a section length to feet.
+const metresToFeet = 3.28084
+
+// measuredFt is the length in feet of the switch-bounded runs the occupied
+// sections stand on, labelled sections included, and of the occupied switch
+// sections. Each section counts once. It is 0 without route data.
+func measuredFt(occupied []SectionRef, rc *routeCtx) int {
+	if rc == nil {
+		return 0
+	}
+	seen := map[int]bool{}
+	metres := 0.0
+	for _, s := range occupied {
+		if s.Prefix != rc.prefix {
+			continue
+		}
+		for _, n := range rc.topo.TrackOf(s.Section) {
+			if seen[n] {
+				continue
+			}
+			seen[n] = true
+			if sec, ok := rc.topo.Section(n); ok {
+				metres += sec.LengthM
+			}
+		}
+	}
+	return int(math.Round(metres * metresToFeet))
 }
 
 func blankTag(t string) bool { return t == "" || strings.EqualFold(t, "None") }

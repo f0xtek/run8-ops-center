@@ -52,16 +52,24 @@ type run8HumpSchema struct {
 }
 
 type run8EndsSchema struct {
-	Pattern     string `yaml:"pattern"`
-	Yard        string `yaml:"yard"`
-	TrackPrefix string `yaml:"trackPrefix"`
+	Pattern     string         `yaml:"pattern"`
+	Yard        string         `yaml:"yard"`
+	TrackPrefix string         `yaml:"trackPrefix"`
+	Names       map[int]string `yaml:"names"`
 }
 
 type yardSchema struct {
-	Code             string   `yaml:"code"`
-	Name             string   `yaml:"name"`
-	AnchorMileposts  []string `yaml:"anchorMileposts"`
-	AnchorIndustries []string `yaml:"anchorIndustries"`
+	Code             string        `yaml:"code"`
+	Name             string        `yaml:"name"`
+	AnchorMileposts  []string      `yaml:"anchorMileposts"`
+	AnchorIndustries []string      `yaml:"anchorIndustries"`
+	Tracks           []trackSchema `yaml:"tracks"`
+}
+
+type trackSchema struct {
+	Name     string `yaml:"name"`
+	LengthFt int    `yaml:"lengthFt"`
+	Kind     string `yaml:"kind"`
 }
 
 // limitSchema overrides limits from the limits file. A nil field keeps the

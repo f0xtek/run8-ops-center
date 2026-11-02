@@ -5,7 +5,7 @@
 # folder. Edit this file freely. When a new version of the app ships a newer
 # schemaVersion, it replaces this file and keeps your old copy as
 # profile.yaml.v<old>.bak.
-schemaVersion: 2
+schemaVersion: 4
 id: ags-south-p1
 name: AGS South Phase 1 (NS Birmingham)
 
@@ -13,14 +13,145 @@ name: AGS South Phase 1 (NS Birmingham)
 defaultSaveDir: 'C:\Run8Studios\Run8 Train Simulator V3\Content\V3Routes\Regions\GulfCoast\Trains'
 defaultAutoSaveDir: 'C:\Run8Studios\Run8 Train Simulator V3\Content\V3Routes\Regions\GulfCoast\AutoSaves'
 
+# Each yard can list its tracks: a name, a length in feet and a kind (yard,
+# siding or main). The lists come from The Depot's AGS South and Norris Yard
+# maps, as names and lengths only. Learn mode offers the names as hints, and the
+# yards view shows which ones are not labelled yet. A siding or main entry
+# labels its sections as ignored. Norris receiving is left out, because the Run8
+# import names those tracks: the 14 receiving tracks, including the two
+# thoroughfares, come from the trackEnds rule at the end of this file.
 yards:
   - code: NOR
     name: Norris
     anchorMileposts: [Receiving Yard, West Forwarding Yard, East Forwarding Yard]
-  - {code: TUS, name: Tuscaloosa, anchorMileposts: [Tuscaloosa MP 199.1]}
-  - {code: MCC, name: McCalla, anchorIndustries: [BRI]}
-  - {code: BES, name: Bessemer, anchorIndustries: [BRL]}
-  - {code: 32ND, name: 32nd Street, anchorMileposts: [32nd St Yard]}
+    tracks:
+      # East forwarding
+      - {name: EF01, lengthFt: 2625}
+      - {name: EF02, lengthFt: 2625}
+      - {name: EF03, lengthFt: 2432}
+      - {name: EF04, lengthFt: 2530}
+      - {name: EF05, lengthFt: 7025}
+      - {name: EF06, lengthFt: 6835}
+      - {name: EF07, lengthFt: 6563}
+      - {name: Southern Outbound, lengthFt: 2478}
+      - {name: East Thoroughfare, kind: main}
+      # West forwarding
+      - {name: WF01, lengthFt: 11448}
+      - {name: WF02, lengthFt: 11455}
+      - {name: WF03, lengthFt: 11439}
+      - {name: WF04, lengthFt: 6188}
+      - {name: WF05, lengthFt: 6080}
+      - {name: WF06, lengthFt: 5730}
+      - {name: WF07, lengthFt: 5725}
+      - {name: CAB 01, lengthFt: 710}
+      - {name: CAB 02, lengthFt: 626}
+      - {name: Old AGS Main, lengthFt: 7225, kind: main}
+      # Pullbacks and hill
+      - {name: East Pullback, lengthFt: 3887}
+      - {name: West Pullback, lengthFt: 3887}
+      - {name: Hill TF, lengthFt: 752}
+      - {name: Middle, lengthFt: 543}
+      - {name: Stock Pen, lengthFt: 505}
+      - {name: Outbehind, lengthFt: 752}
+      - {name: Ferguson, lengthFt: 752}
+      - {name: Rail Highway, lengthFt: 1713}
+      - {name: Engine Thoroughfare 01, kind: main}
+      - {name: Engine Thoroughfare 02, kind: main}
+      # Car shop (RIP)
+      - {name: RIP, lengthFt: 555}
+      - {name: RIP Shop 1, lengthFt: 2437}
+      - {name: RIP Shop 2, lengthFt: 2815}
+      - {name: RIP Shop 3, lengthFt: 2820}
+      - {name: RIP Shop 4, lengthFt: 2820}
+      - {name: Wash Track, lengthFt: 785}
+      # Engine area
+      - {name: Adjust 1, lengthFt: 417}
+      - {name: Adjust 2, lengthFt: 417}
+      - {name: Adjust 3, lengthFt: 501}
+      - {name: Wash Rack, lengthFt: 785}
+      - {name: Engine Shop 1, lengthFt: 585}
+      - {name: Engine Shop 2, lengthFt: 585}
+      - {name: Engine Shop 3, lengthFt: 585}
+      - {name: Engine Shop 4, lengthFt: 668}
+      - {name: Engine Shop 5, lengthFt: 585}
+      - {name: Engine Shop 6, lengthFt: 585}
+      - {name: Outbound 1, lengthFt: 668}
+      - {name: Outbound 2, lengthFt: 668}
+      - {name: Outbound 3, lengthFt: 543}
+      - {name: Outbound 4, lengthFt: 543}
+      - {name: Outbound 5, lengthFt: 668}
+      - {name: Butt Head, lengthFt: 334}
+      - {name: Inside, lengthFt: 2048}
+      - {name: Old Outside, lengthFt: 995}
+      - {name: Outside Ramp, lengthFt: 877}
+      - {name: Bentley, lengthFt: 334}
+      - {name: Shop Thoroughfare West, lengthFt: 1170, kind: main}
+      - {name: Shop Thoroughfare East, lengthFt: 752, kind: main}
+      # Local yard
+      - {name: L02, lengthFt: 292}
+      - {name: L03, lengthFt: 376}
+      - {name: L04, lengthFt: 376}
+      - {name: L05, lengthFt: 710}
+      - {name: L06, lengthFt: 835}
+      - {name: L07, lengthFt: 910}
+      - {name: L08, lengthFt: 1040}
+      - {name: L09, lengthFt: 1085}
+      - {name: L10, lengthFt: 1212}
+      - {name: L11, lengthFt: 1253}
+      - {name: L12, lengthFt: 1380}
+      - {name: L13, lengthFt: 1455}
+      - {name: L14, lengthFt: 1588}
+  - code: TUS
+    name: Tuscaloosa
+    anchorMileposts: [Tuscaloosa MP 199.1]
+    tracks:
+      - {name: TY01, lengthFt: 1379}
+      - {name: TY02, lengthFt: 877}
+      - {name: TY04, lengthFt: 334}
+      - {name: TY05, lengthFt: 376}
+      - {name: TY06, lengthFt: 543}
+      - {name: TY07, lengthFt: 500}
+      - {name: TY08, lengthFt: 710}
+      - {name: TM01, lengthFt: 1081}
+      - {name: TS01, lengthFt: 1044}
+      - {name: TAGS, lengthFt: 1500}
+      - {name: Pass, lengthFt: 752, kind: siding}
+      - {name: Chevron, lengthFt: 167}
+  - code: MCC
+    name: McCalla
+    anchorIndustries: [BRI]
+    tracks:
+      - {name: MST1, lengthFt: 5141}
+      - {name: MST2, lengthFt: 4890}
+      - {name: MST3, lengthFt: 4555}
+      - {name: MST4, lengthFt: 4555}
+      - {name: MCET, lengthFt: 961}
+      - {name: Running Track, kind: siding}
+      - {name: Siding, kind: siding}
+      - {name: Main, kind: main}
+  - code: BES
+    name: Bessemer
+    anchorIndustries: [BRL]
+    tracks:
+      - {name: BY01, lengthFt: 1170}
+      - {name: BY02, lengthFt: 912}
+      - {name: BY03, lengthFt: 961}
+      - {name: Hill Track, lengthFt: 1648}
+      - {name: Potter Track, lengthFt: 2550, kind: siding}
+      - {name: Main 1, kind: main}
+      - {name: Main 2, kind: main}
+  - code: 32ND
+    name: 32nd Street
+    anchorMileposts: [32nd St Yard]
+    tracks:
+      - {name: NY01, lengthFt: 2913}
+      - {name: NY02, lengthFt: 2745}
+      - {name: NY03, lengthFt: 2645}
+      - {name: SY01, lengthFt: 2241}
+      - {name: SY02, lengthFt: 1905}
+      - {name: Main 1, kind: main}
+      - {name: Main 2, kind: main}
+      - {name: Passenger Main, kind: main}
 
 # Anchors place a yard on the map when a cut sits outside every labelled track.
 # A milepost anchor is a Run8 milepost station name. An industry anchor is an
@@ -218,3 +349,7 @@ run8:
     - pattern: '(?i)^Norris RCV (?P<n>\d+) (?P<end>North|South) end$'
       yard: NOR
       trackPrefix: Receiving
+      # Names by track number. RCV 1 is the Receiving East Thoroughfare, RCV 2
+      # to 13 are R12 to R01 across the yard, and RCV 14 is the Receiving West
+      # Thoroughfare. A number left out is named "<trackPrefix> <number>".
+      names: {1: Receiving East Thoroughfare, 2: R12, 3: R11, 4: R10, 5: R09, 6: R08, 7: R07, 8: R06, 9: R05, 10: R04, 11: R03, 12: R02, 13: R01, 14: Receiving West Thoroughfare}

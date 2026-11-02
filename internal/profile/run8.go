@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"path/filepath"
 	"regexp"
+	"sort"
 	"strings"
 )
 
@@ -66,7 +67,12 @@ func buildRun8(p *Profile, s *run8Schema) (*Run8Config, []Problem) {
 			v.add(CodeUnknownRef, yard, "run8 trackEnds pattern %q names unknown yard %q", e.Pattern, yard)
 			continue
 		}
-		cfg.TrackEnds = append(cfg.TrackEnds, Run8TrackEnds{Pattern: re, Yard: yard, TrackPrefix: strings.TrimSpace(e.TrackPrefix)})
+		cfg.TrackEnds = append(cfg.TrackEnds, Run8TrackEnds{
+			Pattern:     re,
+			Yard:        yard,
+			TrackPrefix: strings.TrimSpace(e.TrackPrefix),
+			Names:       v.trackEndNames(e),
+		})
 	}
 	return cfg, v.out
 }
@@ -88,6 +94,40 @@ func folderNameProblem(name string) string {
 		return `the name is "."`
 	}
 	return ""
+}
+
+// trackEndNames returns the names a trackEnds rule gives to track numbers,
+// in number order. It reports and drops a number below 1, an empty name and
+// a name already used by a lower number, whatever the case or spacing. It
+// returns nil when nothing is left.
+func (v *validator) trackEndNames(e run8EndsSchema) map[int]string {
+	nums := make([]int, 0, len(e.Names))
+	for n := range e.Names {
+		nums = append(nums, n)
+	}
+	sort.Ints(nums)
+	var out map[int]string
+	used := map[string]bool{}
+	for _, n := range nums {
+		name := NormTag(e.Names[n])
+		switch {
+		case n < 1:
+			v.add(CodeInvalidRun8, e.Pattern, "run8 trackEnds pattern %q names track number %d, which is below 1", e.Pattern, n)
+			continue
+		case name == "":
+			v.add(CodeInvalidRun8, e.Pattern, "run8 trackEnds pattern %q gives track %d an empty name", e.Pattern, n)
+			continue
+		case used[strings.ToLower(name)]:
+			v.add(CodeInvalidRun8, e.Pattern, "run8 trackEnds pattern %q uses the name %q more than once", e.Pattern, name)
+			continue
+		}
+		used[strings.ToLower(name)] = true
+		if out == nil {
+			out = map[int]string{}
+		}
+		out[n] = name
+	}
+	return out
 }
 
 func hasPrefix(list []int, n int) bool {

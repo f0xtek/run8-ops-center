@@ -17,6 +17,8 @@ const (
 	CodeUnmappedCarType  = "unmapped-car-type"
 	CodeInvalidRun8      = "invalid-run8"
 	CodeUnmatchedAnchor  = "unmatched-anchor"
+	CodeInvalidTrack     = "invalid-track"
+	CodeDuplicateTrack   = "duplicate-track"
 	stopKindYard         = "yard"
 	stopKindIndustry     = "industry"
 )

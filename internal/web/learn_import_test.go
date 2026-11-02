@@ -109,7 +109,7 @@ func TestImportPreviewShowsEveryCategory(t *testing.T) {
 	for _, want := range []string{
 		"Import preview", "Nothing has been changed yet",
 		"New labels", "Changed labels", "Removed labels", "Kept manual", "Skipped items",
-		"NOR / Bowl 1", "NOR / Bowl 4", "NOR / Receiving 1", "NOR / Receiving 2", "BRL",
+		"NOR / Bowl 1", "NOR / Bowl 4", "NOR / Receiving East Thoroughfare", "NOR / R12", "BRL",
 		"Kept manual labels", "280/106: stays NOR / Track 9, the import would say BRL",
 		"Skipped items", // the heading
 	} {
@@ -120,7 +120,7 @@ func TestImportPreviewShowsEveryCategory(t *testing.T) {
 	// Industries the profile does not know, and receiving tracks that cannot be built, are
 	// skipped with reasons.
 	skipped := vwText(vwBetween(t, body, `id="import-skipped"`, `</section>`))
-	for _, want := range []string{"ZZZ", "BBB", "Receiving 3", "Receiving 4"} {
+	for _, want := range []string{"ZZZ", "BBB", "NOR / R11", "NOR / R10"} {
 		if !strings.Contains(skipped, want) {
 			t.Errorf("skipped list lacks %q:\n%s", want, skipped)
 		}

@@ -15,6 +15,23 @@ type CarType string
 // Unknown is the type of a car whose model matches no pattern.
 const Unknown CarType = "Unknown"
 
+// TrackKind says what a listed yard track is.
+type TrackKind string
+
+// The kinds of listed track. A listed track with no kind is TrackYard.
+const (
+	TrackYard   TrackKind = "yard"
+	TrackSiding TrackKind = "siding"
+	TrackMain   TrackKind = "main"
+)
+
+// YardTrack is one track a yard lists, for example from the route's map.
+type YardTrack struct {
+	Name     string
+	LengthFt int // 0 when unknown
+	Kind     TrackKind
+}
+
 // Yard is a named yard.
 type Yard struct {
 	Code string // "NOR"
@@ -25,11 +42,26 @@ type Yard struct {
 	// AnchorIndustries are tags of profile industries that mark where the
 	// yard is.
 	AnchorIndustries []string
+	// Tracks lists the yard's tracks in profile order. Entries that failed
+	// validation are already dropped and are listed in Profile.Report.
+	Tracks []YardTrack
+}
+
+// TrackByName finds a listed track by name, ignoring case and extra
+// whitespace.
+func (y *Yard) TrackByName(name string) (YardTrack, bool) {
+	name = NormTag(name)
+	for _, t := range y.Tracks {
+		if strings.EqualFold(t.Name, name) {
+			return t, true
+		}
+	}
+	return YardTrack{}, false
 }
 
 // BundledSchemaVersion is the profile.yaml schemaVersion of the profile
 // embedded in this binary. Load refuses a profile with a newer version.
-const BundledSchemaVersion = 2
+const BundledSchemaVersion = 4
 
 // Run8Route is a Run8 route folder and the track section prefix it covers.
 type Run8Route struct {
@@ -46,11 +78,13 @@ type Run8Hump struct {
 
 // Run8TrackEnds maps special locations whose name matches Pattern to a yard
 // and a track name prefix. Pattern has the named groups n (track number) and
-// end (which end of the track).
+// end (which end of the track). Names gives track numbers a name of their own;
+// a number without one is named TrackPrefix and the number.
 type Run8TrackEnds struct {
 	Pattern     *regexp.Regexp
 	Yard        string // yard code
 	TrackPrefix string // "Receiving"
+	Names       map[int]string
 }
 
 // Run8Config names the Run8 route data a profile reads. Entries that failed

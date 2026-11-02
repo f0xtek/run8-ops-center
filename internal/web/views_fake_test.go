@@ -148,7 +148,8 @@ func (b *vwBackend) viewLocked() *engine.View {
 		Source: b.source, HasSnapshot: true, Profile: prof, Profiles: b.profiles,
 		Status: st, TrackMap: b.tm,
 		Candidates: b.tm.Candidates(b.snap, prof, data), Locations: b.tm.Locations(),
-		Coverage: b.tm.Coverage(b.snap), Activity: append([]store.ActivityEntry(nil), b.activity...),
+		LocationFt: trackmap.LocationLengthsFt(b.tm.Locations(), prof, data),
+		Coverage:   b.tm.Coverage(b.snap), Activity: append([]store.ActivityEntry(nil), b.activity...),
 		Settings: b.settings,
 	}
 	if b.imp != nil {
@@ -302,7 +303,12 @@ func (b *vwBackend) PreviewImport() (engine.ImportPreview, error) {
 	if b.imp == nil {
 		return engine.ImportPreview{}, errors.New("profile names no Run8 folders")
 	}
-	return b.imp.preview(b.tm)
+	p, err := b.imp.preview(b.tm)
+	if err == nil {
+		p.Locations = engine.ImportLocations(p.Diff, b.snap, b.effective(), b.imp.data())
+		p.CarsKnown = b.snap != nil
+	}
+	return p, err
 }
 
 func (b *vwBackend) ConfirmImport(token string) error {

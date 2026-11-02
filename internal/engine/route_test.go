@@ -3,13 +3,17 @@ package engine
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io/fs"
+	"math"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
 	"time"
 
+	"run8-ops-center/internal/carstatus"
 	"run8-ops-center/internal/profile"
 	"run8-ops-center/internal/run8route"
 	"run8-ops-center/internal/run8route/run8routetest"
@@ -428,10 +432,24 @@ func TestRun8StateFollowsTheFiles(t *testing.T) {
 	}
 }
 
+// yardTracksRE matches the `tracks:` block of a bundled yard, which a version-2
+// profile does not have. receivingNamesRE matches the `names:` line of the
+// receiving rule, which a profile before version 4 does not have.
+var (
+	yardTracksRE     = regexp.MustCompile(`(?m)^    tracks:\n(?:      .*\n)+`)
+	receivingNamesRE = regexp.MustCompile(`(?m)^      names: .*\n`)
+)
+
 // TestStartupUpgradesAnOldProfile is the task 5.4 check: a data directory with
-// a version-1 AGS profile and a track map starts with the version-2 profile
-// active, the old files kept as .v1.bak and the labels intact.
+// a version-2 or version-3 AGS profile and a track map starts with the current
+// profile active, the old files kept as .v<old>.bak and the labels intact.
 func TestStartupUpgradesAnOldProfile(t *testing.T) {
+	for _, old := range []int{2, 3} {
+		t.Run(fmt.Sprintf("v%d", old), func(t *testing.T) { upgradesAnOldProfile(t, old) })
+	}
+}
+
+func upgradesAnOldProfile(t *testing.T, version int) {
 	dir := t.TempDir()
 	guard := store.NewGuard()
 	profiles := filepath.Join(dir, profilesDirName)
@@ -440,12 +458,22 @@ func TestStartupUpgradesAnOldProfile(t *testing.T) {
 	}
 	pdir := filepath.Join(profiles, DefaultProfileID)
 	bundled := string(readFile(t, filepath.Join(pdir, profile.ProfileFile)))
-	cut := strings.Index(bundled, "# Run8 route data the app can import")
-	if cut < 0 || !strings.Contains(bundled, "schemaVersion: 2\n") {
-		t.Fatal("cannot build a version 1 profile from the bundled one")
+	body := receivingNamesRE.ReplaceAllString(bundled, "")
+	if body == bundled {
+		t.Fatal("cannot build a version 3 profile from the bundled one")
+	}
+	if version == 2 {
+		body = yardTracksRE.ReplaceAllString(body, "")
+		if strings.Contains(body, "tracks:\n") {
+			t.Fatal("cannot build a version 2 profile from the bundled one")
+		}
+	}
+	current := fmt.Sprintf("schemaVersion: %d\n", profile.BundledSchemaVersion)
+	if !strings.Contains(body, current) {
+		t.Fatalf("the bundled profile lacks %q", current)
 	}
 	old := map[string]string{
-		profile.ProfileFile:  strings.Replace(bundled[:cut], "schemaVersion: 2\n", "", 1),
+		profile.ProfileFile:  strings.Replace(body, current, fmt.Sprintf("schemaVersion: %d\n", version), 1),
 		profile.IndustryFile: string(readFile(t, filepath.Join(pdir, profile.IndustryFile))) + "# user edit\n",
 		profile.LimitsFile:   string(readFile(t, filepath.Join(pdir, profile.LimitsFile))) + "# user edit\n",
 	}
@@ -469,9 +497,13 @@ func TestStartupUpgradesAnOldProfile(t *testing.T) {
 	if v.Profile.ID != DefaultProfileID || v.Profile.SchemaVersion != profile.BundledSchemaVersion || v.Profile.Run8 == nil {
 		t.Fatalf("profile = %s version %d run8 %v", v.Profile.ID, v.Profile.SchemaVersion, v.Profile.Run8)
 	}
+	if names := v.Profile.Run8.TrackEnds[0].Names; len(names) != 14 {
+		t.Errorf("the upgraded profile has %d receiving names, want 14", len(names))
+	}
+	bak := fmt.Sprintf(".v%d.bak", version)
 	for name, content := range old {
-		if got := string(readFile(t, filepath.Join(pdir, name+".v1.bak"))); got != content {
-			t.Errorf("%s.v1.bak = %.60q, want the old file", name, got)
+		if got := string(readFile(t, filepath.Join(pdir, name+bak))); got != content {
+			t.Errorf("%s%s = %.60q, want the old file", name, bak, got)
 		}
 		if got := string(readFile(t, filepath.Join(pdir, name))); got == content {
 			t.Errorf("%s was not replaced", name)
@@ -485,5 +517,151 @@ func TestStartupUpgradesAnOldProfile(t *testing.T) {
 	}
 	if l, _ := v.TrackMap.Lookup(280, 5101); l.Track != "Bowl 14" || l.Source != "" {
 		t.Errorf("280/5101 = %+v", l)
+	}
+}
+
+func TestViewMeasuresYardLocationsFromRouteData(t *testing.T) {
+	h, _ := startWithInstall(t, run8routetest.Synthetic())
+	if v := h.eng.View(); len(v.LocationFt) != 0 {
+		t.Fatalf("no labels yet, but LocationFt = %v", v.LocationFt)
+	}
+	p, err := h.eng.PreviewImport()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := h.eng.ConfirmImport(p.Token); err != nil {
+		t.Fatal(err)
+	}
+	topo := h.eng.routeData().Topology
+	feet := func(sections ...int) int {
+		m := 0.0
+		for _, s := range sections {
+			sec, ok := topo.Section(s)
+			if !ok {
+				t.Fatalf("no section %d", s)
+			}
+			m += sec.LengthM
+		}
+		return int(math.Round(m * 3.28084))
+	}
+	key := func(track string) string {
+		return trackmap.Location{Kind: trackmap.KindYard, Yard: "NOR", Track: track}.Key()
+	}
+	v := h.eng.View()
+	// RCV 1 is sections 300, 301 and 302; the bundled profile names it "Receiving East Thoroughfare".
+	if got, want := v.LocationFt[key("Receiving East Thoroughfare")], feet(300, 301, 302); got != want || want < 500 {
+		t.Errorf("Receiving East Thoroughfare measures %d ft, want %d", got, want)
+	}
+	for k := range v.LocationFt {
+		if !strings.HasPrefix(k, "yard|") {
+			t.Errorf("LocationFt holds %q, which is not a yard location", k)
+		}
+	}
+
+	// A manual label on one section measures that section alone, and the view follows at once.
+	manual := trackmap.Label{Kind: trackmap.KindYard, Yard: "NOR", Track: "Track 9"}
+	if err := h.eng.LabelSection(run8routetest.Prefix, run8routetest.SecSiding1, manual); err != nil {
+		t.Fatal(err)
+	}
+	if got, want := h.eng.View().LocationFt[key("Track 9")], feet(run8routetest.SecSiding1); got != want || want == 0 {
+		t.Errorf("Track 9 measures %d ft, want %d", got, want)
+	}
+
+	// Without Run8 folders there is no route data and so no measured length.
+	bare := start(t)
+	if err := bare.eng.LabelSection(run8routetest.Prefix, run8routetest.SecSiding1, manual); err != nil {
+		t.Fatal(err)
+	}
+	if v := bare.eng.View(); v.LocationFt != nil {
+		t.Errorf("no install: LocationFt = %v", v.LocationFt)
+	}
+}
+
+func TestPreviewMeasuresLocationsAndFindsCars(t *testing.T) {
+	h, _ := startWithInstall(t, run8routetest.Synthetic())
+	const prefix = run8routetest.Prefix
+	truck := func(section int) run8save.Truck { return run8save.Truck{RoutePrefix: prefix, Section: section} }
+	boxcar := func(unit string, sections ...int) run8save.Vehicle {
+		v := run8save.Vehicle{Model: "R8_Boxcar_X.xml", UnitType: "US_Freightcar", UnitNumber: unit}
+		for _, s := range sections {
+			v.Trucks = append(v.Trucks, truck(s))
+		}
+		return v
+	}
+	number := func(unit string) string { return carstatus.Number("R8_Boxcar_X.xml", unit) }
+
+	// A PreviewImport before any save knows no cars.
+	p, err := h.eng.PreviewImport()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if p.CarsKnown {
+		t.Error("CarsKnown before a save was loaded")
+	}
+
+	vs := []run8save.Vehicle{
+		boxcar("B1", run8routetest.SecBowl1, run8routetest.SecBowl1),
+		boxcar("B2", 99999, run8routetest.SecBowl1), // lead truck off the listed sections, trailing truck on Bowl 1
+		boxcar("S1", run8routetest.SecSiding1, run8routetest.SecSiding2), // one car across two sections of BRL
+	}
+	loco := boxcar("L1", run8routetest.SecBowl1, run8routetest.SecBowl1)
+	loco.UnitType = "US_DieselEngine"
+	vs = append(vs, loco)
+	for i := range 6 { // more cars on the siding than the sample holds
+		vs = append(vs, boxcar(string(rune('c'+i)), run8routetest.SecSiding2))
+	}
+	h.ingest(snapshotEvent(&run8save.Snapshot{Trains: []run8save.Train{{ID: "T1", Vehicles: vs}}}, "WorldSave.xml", false))
+
+	p, err = h.eng.PreviewImport()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !p.CarsKnown {
+		t.Error("CarsKnown with a save loaded")
+	}
+	feet := func(sections ...int) int {
+		m := 0.0
+		for _, s := range sections {
+			sec, ok := h.eng.route.Data.Topology.Section(s)
+			if !ok {
+				t.Fatalf("section %d unknown", s)
+			}
+			m += sec.LengthM
+		}
+		return int(math.Round(m * 3.28084))
+	}
+
+	bowl := p.Locations[trackmap.Location{Kind: trackmap.KindYard, Yard: "NOR", Track: "Bowl 1"}.Key()]
+	if want := feet(run8routetest.SecBowl1); bowl.LengthFt != want || want == 0 {
+		t.Errorf("Bowl 1 measures %d ft, want %d", bowl.LengthFt, want)
+	}
+	if bowl.Cars != 2 || len(bowl.CarNumbers) != 2 || bowl.CarNumbers[0] != number("B1") || bowl.CarNumbers[1] != number("B2") {
+		t.Errorf("Bowl 1 cars = %d %v, want the two cars and no locomotive", bowl.Cars, bowl.CarNumbers)
+	}
+
+	brl := p.Locations[trackmap.Location{Kind: trackmap.KindIndustry, Industries: []string{"BRL"}}.Key()]
+	if want := feet(run8routetest.SecSiding1, run8routetest.SecSiding2); brl.LengthFt != want {
+		t.Errorf("BRL measures %d ft, want %d", brl.LengthFt, want)
+	}
+	// S1 counts once, at its lead truck, plus the six cars.
+	if brl.Cars != 7 || len(brl.CarNumbers) != 5 || brl.CarNumbers[0] != number("S1") {
+		t.Errorf("BRL cars = %d %v, want 7 with 5 numbers", brl.Cars, brl.CarNumbers)
+	}
+
+	// A location nothing stands on has a length and no cars.
+	empty := p.Locations[trackmap.Location{Kind: trackmap.KindYard, Yard: "NOR", Track: "Bowl 4"}.Key()]
+	if empty.Cars != 0 || len(empty.CarNumbers) != 0 || empty.LengthFt == 0 {
+		t.Errorf("Bowl 4 = %+v", empty)
+	}
+
+	// Without route data nothing is measured, but the cars are still found.
+	got := ImportLocations(p.Diff, h.eng.snap, h.eng.eff, nil)
+	for k, l := range got {
+		if l.LengthFt != 0 {
+			t.Errorf("%s measures %d ft without route data", k, l.LengthFt)
+		}
+	}
+	if got[trackmap.Location{Kind: trackmap.KindYard, Yard: "NOR", Track: "Bowl 1"}.Key()].Cars != 2 {
+		t.Error("no route data: the cars on Bowl 1 are lost")
 	}
 }

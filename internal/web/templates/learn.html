@@ -1,5 +1,5 @@
 {{define "learn_fields"}}
-<div class="learn-fields">
+<div class="learn-fields"{{with .HintsID}} data-hints="{{.}}"{{end}}>
   <label>Kind
     <select name="kind">
       <option value="yard"{{if eq .Fields.Kind "yard"}} selected{{end}}>Yard track</option>
@@ -14,13 +14,14 @@
     </select>
   </label>
   <label>Track name
-    <input type="text" name="track" value="{{.Fields.Track}}" placeholder="Bowl 14" autocomplete="off">
+    <input type="text" name="track" value="{{.Fields.Track}}" placeholder="Bowl 14" autocomplete="off"{{with .ListID}} list="{{.}}"{{end}}>
   </label>
   <label>Industry tags
     <input type="text" name="industries" value="{{.Fields.Industries}}" list="learn-industry-tags" placeholder="GES" autocomplete="off">
   </label>
 </div>
-<p class="muted">Yard track uses the yard and track name. Industry track uses the industry tags; separate several with commas. Ignored needs nothing else.</p>
+{{range .Hints}}<datalist id="{{$.HintsID}}-{{.Code}}">{{range .Options}}<option value="{{.Name}}" label="{{.Label}}" data-kind="{{.Kind}}">{{end}}</datalist>{{end}}
+<p class="muted">Yard track uses the yard and track name. Industry track uses the industry tags; separate several with commas. Ignored needs nothing else.{{if .Hints}} Pick a listed track name for the yard or type your own. A listed siding or main line is labelled ignored.{{end}}</p>
 {{end}}
 {{define "main"}}
 <style>
@@ -126,6 +127,7 @@
     {{if .Samples}}<div class="muted">{{if .Locos}}Locomotives{{else}}Cars{{end}}: <span class="mono">{{range $i, $s := .Samples}}{{if $i}}, {{end}}{{$s}}{{end}}</span></div>{{end}}
     {{if .Tags}}<div class="learn-tags" aria-label="Destination tags">{{range .Tags}}<span class="learn-tag">{{.Tag}} &times;{{.Count}}</span>{{end}}</div>{{end}}
     <div class="learn-secs" aria-label="Unmapped sections">{{range .Shown}}<span>{{.Key}}</span>{{end}}{{if .More}}<span class="muted">and {{.More}} more</span>{{end}}</div>
+    {{if .Measured}}<div class="muted">Measured length of the track it stands on: <b class="mono">{{.Measured}}</b>.</div>{{end}}
     {{if .Extra}}
     <div class="muted">Labelling this {{if .Locos}}train{{else}}cut{{end}} also labels the other {{len .Extra}} unmapped section{{if ne (len .Extra) 1}}s{{end}} of the track it stands on, {{len .Track}} in all:</div>
     <div class="learn-secs" aria-label="Other sections of the track that will be labelled">{{range .ExtraShown}}<span>{{.Key}}</span>{{end}}{{if .ExtraMore}}<span class="muted">and {{.ExtraMore}} more</span>{{end}}</div>
@@ -153,7 +155,7 @@
       <summary>{{if and .Suggestion (not .Suggestion.NeedsTrack)}}Use a different label{{else}}Label this {{if .Locos}}train{{else}}cut{{end}}{{end}}</summary>
       <form class="learn-form" method="post" action="/trackmap/label" data-async>
         <input type="hidden" name="train" value="{{.TrainID}}">
-        {{template "learn_fields" ($d.Form .Prefill)}}
+        {{template "learn_fields" ($d.CandidateForm .)}}
         {{if gt (len .Track) 1}}
         <label>Apply to
           <select name="section">

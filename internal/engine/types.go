@@ -72,6 +72,25 @@ type ImportPreview struct {
 	// Token identifies the route files and the track map revision the diff was
 	// built from. ConfirmImport refuses a token that no longer matches.
 	Token string
+	// Locations holds what the sections each location covers in the diff
+	// (new, changed and removed entries) measure and carry, keyed by
+	// trackmap.Location.Key. A location with no length and no cars has no entry.
+	Locations map[string]ImportLocation
+	// CarsKnown is true when a save was loaded, so an absent car count means
+	// "no cars" rather than "not known".
+	CarsKnown bool
+}
+
+// ImportLocation is the length and the cars of one location's listed sections.
+type ImportLocation struct {
+	// LengthFt is the summed length of the sections, in feet. It is 0 without
+	// route data.
+	LengthFt int
+	// Cars counts the freight cars standing on the sections in the current
+	// save. A car counts once, at its first truck whose section is listed.
+	Cars int
+	// CarNumbers are up to 5 of those cars as car status shows them.
+	CarNumbers []string
 }
 
 // Tiles are the dashboard summary counts.
@@ -118,6 +137,10 @@ type View struct {
 	TrackMap   *trackmap.Map
 	Candidates []trackmap.Candidate     // learn mode: unmapped cuts and trains with suggestions
 	Locations  []trackmap.LocationGroup // labelled sections grouped by location
+	// LocationFt is the measured length in feet of each yard location's
+	// labelled sections, keyed by trackmap.Location.Key. It is nil without
+	// route data, and holds no entry for a location that measures nothing.
+	LocationFt map[string]int
 	Coverage   trackmap.Coverage
 
 	Activity []store.ActivityEntry // newest first

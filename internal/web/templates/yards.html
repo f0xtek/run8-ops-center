@@ -59,6 +59,23 @@
     {{else}}
     <p class="empty">No track in {{.Code}} is labelled yet. <a href="/learn">Label tracks in learn mode.</a></p>
     {{end}}
+    {{if .Listed}}
+    <details class="yards-listed"{{if le (len .Listed) 20}} open{{end}}>
+      <summary>Listed tracks: {{.Labelled}} of {{len .Listed}} labelled</summary>
+      <div class="scroll"><table class="sl yards-listed-table">
+        <thead><tr><th>Track</th><th>Listed</th><th>Measured</th><th>Status</th></tr></thead>
+        <tbody>
+        {{range .Listed}}<tr>
+          <td>{{.Name}}{{with .Kind}} <span class="muted">({{.}})</span>{{end}}</td>
+          <td>{{with .ListedFt}}{{.}}{{else}}<span class="muted">unknown</span>{{end}}</td>
+          <td>{{with .Measured}}{{.}}{{else}}<span class="muted">&ndash;</span>{{end}}</td>
+          <td>{{if .Labelled}}{{.Cars}} car{{if ne .Cars 1}}s{{end}}{{else}}<span class="chip off">not labelled yet</span>{{end}}</td>
+        </tr>
+        {{end}}
+        </tbody>
+      </table></div>
+    </details>
+    {{end}}
   </div>
   {{end}}
 </section>

@@ -57,8 +57,11 @@ func walkType(t reflect.Type, path string) []string {
 }
 
 func mapKeyName(path string) string {
-	if path == "aliases" {
+	switch {
+	case path == "aliases":
 		return "tag"
+	case strings.HasSuffix(path, ".names"):
+		return "n"
 	}
 	return "type"
 }
@@ -131,7 +134,7 @@ func TestDocumentedFieldsMatchSchema(t *testing.T) {
 
 func TestDocumentedProblemCodesMatchValidator(t *testing.T) {
 	got := docPaths(docSection(t, readDoc(t), "Validation report"))
-	want := []string{CodeOrphanTag, CodeMalformedTag, CodeUnservedIndustry, CodeUnknownRef, CodeDuplicateTag, CodeUnmappedCarType, CodeUnmatchedModel, CodeInvalidRun8, CodeUnmatchedAnchor}
+	want := []string{CodeOrphanTag, CodeMalformedTag, CodeUnservedIndustry, CodeUnknownRef, CodeDuplicateTag, CodeUnmappedCarType, CodeUnmatchedModel, CodeInvalidRun8, CodeUnmatchedAnchor, CodeInvalidTrack, CodeDuplicateTrack}
 	sort.Strings(got)
 	sort.Strings(want)
 	if !reflect.DeepEqual(got, want) {

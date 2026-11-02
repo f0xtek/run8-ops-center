@@ -175,6 +175,43 @@
 
   window.addEventListener("popstate", function () { refresh(); });
 
+  /* ---------- track name hints ---------- */
+  /* A learn-mode label form that carries data-hints="<prefix>" has one <datalist id="<prefix>-<yard code>">
+     for each yard that lists tracks. Choosing a yard points the track name field at that yard's list.
+     Typing or picking a name that the list marks as a siding or a main line (data-kind) sets the kind to
+     ignored. The server applies the same rule when the form is sent, so this only saves a click. */
+  function normName(s) { return s.trim().replace(/\s+/g, " ").toLowerCase(); }
+
+  function syncHints(box) {
+    var yard = box.querySelector('select[name="yard"]');
+    var track = box.querySelector('input[name="track"]');
+    var kind = box.querySelector('select[name="kind"]');
+    if (!yard || !track || !kind) { return; }
+    var id = box.getAttribute("data-hints") + "-" + yard.value;
+    var list = yard.value ? document.getElementById(id) : null;
+    if (!list) { track.removeAttribute("list"); return; }
+    track.setAttribute("list", id);
+    var want = normName(track.value);
+    if (!want) { return; }
+    for (var i = 0; i < list.options.length; i++) {
+      var o = list.options[i];
+      if (normName(o.value) === want) {
+        var k = o.getAttribute("data-kind");
+        if (k === "siding" || k === "main") { kind.value = "ignored"; }
+        return;
+      }
+    }
+  }
+
+  ["change", "input"].forEach(function (type) {
+    document.addEventListener(type, function (ev) {
+      var t = ev.target;
+      if (!(t instanceof Element) || !t.matches('select[name="yard"], input[name="track"]')) { return; }
+      var box = t.closest("[data-hints]");
+      if (box) { syncHints(box); }
+    });
+  });
+
   /* ---------- theme toggle ---------- */
   document.addEventListener("click", function (ev) {
     var t = ev.target instanceof Element ? ev.target.closest("#theme-toggle") : null;

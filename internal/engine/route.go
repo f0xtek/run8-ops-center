@@ -9,8 +9,10 @@ import (
 	"strconv"
 	"strings"
 
+	"run8-ops-center/internal/carstatus"
 	"run8-ops-center/internal/profile"
 	"run8-ops-center/internal/run8route"
+	"run8-ops-center/internal/run8save"
 	"run8-ops-center/internal/store"
 	"run8-ops-center/internal/trackmap"
 )
@@ -191,6 +193,10 @@ func (e *Engine) PreviewImport() (ImportPreview, error) {
 	err := e.do(func() error {
 		b, err := e.buildImport()
 		out = ImportPreview{Diff: b.diff, Unusable: b.unusable, Token: b.token}
+		if err == nil {
+			out.Locations = ImportLocations(b.diff, e.snap, e.eff, e.routeData())
+			out.CarsKnown = e.snap != nil
+		}
 		e.recompute(false)
 		if ferr := e.finish(); err == nil {
 			err = ferr
@@ -201,6 +207,50 @@ func (e *Engine) PreviewImport() (ImportPreview, error) {
 		return ImportPreview{}, err
 	}
 	return out, nil
+}
+
+// maxImportCarNumbers is how many car numbers a location lists.
+const maxImportCarNumbers = 5
+
+// ImportLocations measures the sections each location covers in the diff (its
+// new, changed and removed entries) and finds the freight cars standing on
+// them in snap. A car belongs to the location of its first truck whose section
+// is listed, the lead truck before the trailing one, and counts once. Without
+// route data no length is set; a nil snap finds no cars.
+func ImportLocations(diff trackmap.ImportDiff, snap *run8save.Snapshot, p *profile.Profile, route *run8route.Data) map[string]ImportLocation {
+	sets := map[string][]string{}
+	owner := map[string]string{} // section key -> location key
+	for _, g := range diff.Groups() {
+		lk := g.Location.Key()
+		for _, list := range [][]trackmap.DiffEntry{g.New, g.Changed, g.Removed} {
+			for _, ent := range list {
+				sets[lk] = append(sets[lk], ent.Key)
+				owner[ent.Key] = lk
+			}
+		}
+	}
+	out := map[string]ImportLocation{}
+	for lk, ft := range trackmap.SectionSetLengthsFt(sets, p, route) {
+		out[lk] = ImportLocation{LengthFt: ft}
+	}
+	if snap != nil {
+		for _, v := range snap.Cars() {
+			for _, t := range v.Trucks {
+				lk, ok := owner[trackmap.Key(t.RoutePrefix, t.Section)]
+				if !ok {
+					continue
+				}
+				loc := out[lk]
+				loc.Cars++
+				if len(loc.CarNumbers) < maxImportCarNumbers {
+					loc.CarNumbers = append(loc.CarNumbers, carstatus.Number(v.Model, v.UnitNumber))
+				}
+				out[lk] = loc
+				break
+			}
+		}
+	}
+	return out
 }
 
 // ConfirmImport applies the import again from freshly read files and saves it,
