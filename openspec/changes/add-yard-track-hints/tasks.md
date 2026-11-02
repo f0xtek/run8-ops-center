@@ -20,6 +20,11 @@
 - [x] 4.2 Add the "Listed tracks" table to the yards view (design D4). Verify with view tests that labelled entries show the listed and measured lengths and that unlabelled entries show "not labelled yet" (the TY06 scenario). Then check it in a browser.
 - [x] 4.3 Update the README learn-mode section for track name hints, the siding and main rule, and the yards view table. Read `skill://unslop` before writing, and run the finished text through it. Verify that the steps match the UI from 4.1 and 4.2 and that the unslop pass was applied.
 
+## 6. Import preview clarity
+
+- [x] 6.1 Make each preview location state its counts as track sections (e.g. "4 track sections" instead of "4 new"), add a line saying the IDs are pieces of track and not cars, and put the `280/…` section IDs behind a "show section IDs" toggle. Verify with web tests that the summary says "track sections" and that the IDs sit inside the toggle.
+- [x] 6.2 Add each location's measured length (sum of its sections' lengths, shown only with route data) and the cars standing on its sections in the current snapshot (count plus up to 5 car numbers, truck 0 then truck 1 as in car status). Verify with tests: a synthetic location's length equals its section sum; an empty location shows no cars; a location with cars shows the count and sample. Then check in a browser that `NOR / Bowl 1` shows its sections, length and "no cars there now", and that a receiving track with cars lists them.
+
 ## 5. Integration
 
 - [x] 5.1 Smoke test on macOS: seed a version-2 AGS profile with a `trackmap.json`, run the binary against a temp install from `references/AutoLabel/`, and confirm the import. In learn mode, label one Tuscaloosa cut and one 32nd St cut from their hints. Verify that the profile was upgraded with `.v2.bak` backups and the labels were kept, that the hints rank as expected, that the two labels use the map names, and that the yards view lists the remaining tracks as not labelled yet.

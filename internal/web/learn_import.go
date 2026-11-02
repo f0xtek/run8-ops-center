@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strings"
 
 	"run8-ops-center/internal/engine"
 	"run8-ops-center/internal/trackmap"
@@ -47,11 +48,58 @@ type importCounts struct {
 // Apply is how many sections confirming adds, replaces or removes.
 func (c importCounts) Apply() int { return c.New + c.Changed + c.Removed }
 
-// importGroup is one location's share of the diff.
+// importGroup is one location's share of the diff. Summary counts its new,
+// changed and removed track sections in words. Length and Cars describe the
+// same sections.
 type importGroup struct {
 	Name                  string
 	Kind                  string
 	New, Changed, Removed []importEntry
+	Summary               string // "4 track sections, all new", "3 track sections (2 new, 1 changed)"
+	Length                string // "1,217 ft", "" without route data
+	Cars                  string // "No cars there now", "3 cars there now: A 1, B 2", "" with no save loaded
+}
+
+// sectionSummary counts a group's track sections and splits them by outcome.
+func sectionSummary(g importGroup) string {
+	total := len(g.New) + len(g.Changed) + len(g.Removed)
+	s := fmt.Sprintf("%d track section%s", total, plural(total))
+	var parts []string
+	for _, p := range []struct {
+		n    int
+		word string
+	}{{len(g.New), "new"}, {len(g.Changed), "changed"}, {len(g.Removed), "removed"}} {
+		if p.n == total {
+			return s + ", all " + p.word
+		}
+		if p.n > 0 {
+			parts = append(parts, fmt.Sprintf("%d %s", p.n, p.word))
+		}
+	}
+	return s + " (" + strings.Join(parts, ", ") + ")"
+}
+
+func plural(n int) string {
+	if n == 1 {
+		return ""
+	}
+	return "s"
+}
+
+// importCars words the cars standing on a location's sections. known is false
+// when no save is loaded, which says nothing about cars.
+func importCars(known bool, loc engine.ImportLocation) string {
+	switch {
+	case !known:
+		return ""
+	case loc.Cars == 0:
+		return "No cars there now"
+	}
+	s := fmt.Sprintf("%d car%s there now: %s", loc.Cars, plural(loc.Cars), strings.Join(loc.CarNumbers, ", "))
+	if more := loc.Cars - len(loc.CarNumbers); more > 0 {
+		s += fmt.Sprintf(" and %d more", more)
+	}
+	return s
 }
 
 // importEntry is one section. Was and Now are the readable labels before and after.
@@ -90,10 +138,17 @@ func importBuild(p engine.ImportPreview) importPage {
 			}
 			continue
 		}
-		page.Groups = append(page.Groups, importGroup{
+		ig := importGroup{
 			Name: g.Location.String(), Kind: string(g.Location.Kind),
 			New: importEntries(g.New), Changed: importEntries(g.Changed), Removed: importEntries(g.Removed),
-		})
+		}
+		loc := p.Locations[g.Location.Key()]
+		ig.Summary = sectionSummary(ig)
+		if loc.LengthFt > 0 {
+			ig.Length = ptGroup(loc.LengthFt) + " ft"
+		}
+		ig.Cars = importCars(p.CarsKnown, loc)
+		page.Groups = append(page.Groups, ig)
 	}
 	return page
 }

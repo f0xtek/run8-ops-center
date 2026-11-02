@@ -20,7 +20,7 @@
     <div class="tile"><b>{{.Counts.Skipped}}</b><span>Skipped items</span></div>
     <div class="tile"><b>{{.Counts.Unchanged}}</b><span>Unchanged</span></div>
   </div>
-  <p class="muted">Counts are in track sections, except the skipped items. New labels go on sections with no label. A changed label is an earlier import's label that the Run8 data now sets differently. A removed label is one an earlier import made that the Run8 data no longer asks for.</p>
+  <p class="muted">Counts are in track sections, except the skipped items. A track section is a piece of track, not a car. New labels go on sections with no label. A changed label is an earlier import's label that the Run8 data now sets differently. A removed label is one an earlier import made that the Run8 data no longer asks for.</p>
   <form method="post" action="/trackmap/import/confirm" data-async>
     <input type="hidden" name="token" value="{{.Token}}">
     <div class="row">
@@ -28,7 +28,7 @@
       <a class="btn" href="/learn#import">Cancel</a>
     </div>
   </form>
-  {{if not .Counts.Apply}}<p class="muted">No label would change. Confirming still records the Run8 files as imported, which clears the track data notice.</p>{{end}}
+  {{if not .Counts.Apply}}<p class="muted">No label would change. Confirming still records the Run8 files as imported, which clears the track data notice.</p>{{else}}<p class="muted">Confirming labels, relabels or unlabels {{.Counts.Apply}} track section{{if ne .Counts.Apply 1}}s{{end}}. No car is touched.</p>{{end}}
 </section>
 
 {{if .Unusable}}
@@ -51,17 +51,22 @@
   {{if not .Groups}}
   <p class="empty">No location gains, changes or loses a label.{{if .Quiet}} {{.Quiet}} location{{if ne .Quiet 1}}s are{{else}} is{{end}} already as the import would set {{if ne .Quiet 1}}them{{else}}it{{end}}.{{end}}</p>
   {{else}}
-  <p class="muted">{{len .Groups}} location{{if ne (len .Groups) 1}}s{{end}} to change{{if .Quiet}}; {{.Quiet}} more already match{{end}}. Open a location to see its sections.</p>
+  <p class="muted">{{len .Groups}} location{{if ne (len .Groups) 1}}s{{end}} to change{{if .Quiet}}; {{.Quiet}} more already match{{end}}. The numbers like 280/4425 are IDs of pieces of track, not cars. The cars standing on each location are listed with it.</p>
   {{end}}
   {{range .Groups}}
   <details class="imp-group">
     <summary>
       <b>{{.Name}}</b> <span class="chip wait">{{.Kind}}</span>
-      <span class="muted">{{with .New}}{{len .}} new{{end}}{{with .Changed}} {{len .}} changed{{end}}{{with .Removed}} {{len .}} removed{{end}}</span>
+      <span class="muted">{{.Summary}}</span>
+      {{with .Length}}<span class="muted">Length of these sections: {{.}}</span>{{end}}
+      {{with .Cars}}<span class="muted imp-cars">{{.}}</span>{{end}}
     </summary>
-    {{with .New}}<div class="muted">New</div><ul class="imp-list">{{range .}}<li>{{.Key}}</li>{{end}}</ul>{{end}}
-    {{with .Changed}}<div class="muted">Changed</div><ul class="imp-list">{{range .}}<li>{{.Key}}: {{.Was}} to {{.Now}}</li>{{end}}</ul>{{end}}
-    {{with .Removed}}<div class="muted">Removed</div><ul class="imp-list">{{range .}}<li>{{.Key}}: was {{.Was}}</li>{{end}}</ul>{{end}}
+    <details class="imp-ids">
+      <summary>Show section IDs</summary>
+      {{with .New}}<div class="muted">New</div><ul class="imp-list">{{range .}}<li>{{.Key}}</li>{{end}}</ul>{{end}}
+      {{with .Changed}}<div class="muted">Changed</div><ul class="imp-list">{{range .}}<li>{{.Key}}: {{.Was}} to {{.Now}}</li>{{end}}</ul>{{end}}
+      {{with .Removed}}<div class="muted">Removed</div><ul class="imp-list">{{range .}}<li>{{.Key}}: was {{.Was}}</li>{{end}}</ul>{{end}}
+    </details>
   </details>
   {{end}}
 </section>

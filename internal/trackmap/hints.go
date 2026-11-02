@@ -94,3 +94,32 @@ func LocationLengthsFt(groups []LocationGroup, p *profile.Profile, route *run8ro
 	}
 	return out
 }
+
+// SectionSetLengthsFt measures sets of section keys ("<prefix>/<section>"),
+// each set under a caller-chosen name: the summed track length in feet from
+// the track database. A key of another route prefix, a bad key or a section
+// the database does not know adds nothing, and a set that measures nothing is
+// left out. It returns nil without usable route data.
+func SectionSetLengthsFt(sets map[string][]string, p *profile.Profile, route *run8route.Data) map[string]int {
+	rc := newRouteCtx(p, route)
+	if rc == nil {
+		return nil
+	}
+	out := map[string]int{}
+	for name, keys := range sets {
+		metres := 0.0
+		for _, k := range keys {
+			prefix, section, err := ParseKey(k)
+			if err != nil || prefix != rc.prefix {
+				continue
+			}
+			if sec, ok := rc.topo.Section(section); ok {
+				metres += sec.LengthM
+			}
+		}
+		if ft := int(math.Round(metres * metresToFeet)); ft > 0 {
+			out[name] = ft
+		}
+	}
+	return out
+}

@@ -196,6 +196,29 @@ func TestLocationLengthsFtSumsLabelledSections(t *testing.T) {
 	}
 }
 
+func TestSectionSetLengthsFtSumsKeys(t *testing.T) {
+	res := synthRoute(t)
+	p := synthProfile()
+	sets := map[string][]string{
+		"rcv1":    {sec(300), sec(301), sec(302)},
+		"mixed":   {sec(310), Key(999, 310), sec(77777), "bad"}, // only 310 counts
+		"nothing": {Key(999, 300), sec(77777)},
+		"empty":   nil,
+	}
+	want := map[string]int{"rcv1": sumFt(t, res, 300, 301, 302), "mixed": sumFt(t, res, 310)}
+	if got := SectionSetLengthsFt(sets, p, &res.Data); !reflect.DeepEqual(got, want) {
+		t.Errorf("lengths = %v, want %v", got, want)
+	}
+	if got := SectionSetLengthsFt(sets, p, nil); got != nil {
+		t.Errorf("no route data: %v", got)
+	}
+	bare := synthProfile()
+	bare.Run8 = nil
+	if got := SectionSetLengthsFt(sets, bare, &res.Data); got != nil {
+		t.Errorf("no run8 block: %v", got)
+	}
+}
+
 // A cut on a 717 ft track in Tuscaloosa ranks TY08 (710 ft) then Pass (752 ft)
 // first. The fixtures hold no 717 ft run with a cut on it, so the measured
 // length is given. The test reads the bundled AGS lists through the local route

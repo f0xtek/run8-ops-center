@@ -303,7 +303,12 @@ func (b *vwBackend) PreviewImport() (engine.ImportPreview, error) {
 	if b.imp == nil {
 		return engine.ImportPreview{}, errors.New("profile names no Run8 folders")
 	}
-	return b.imp.preview(b.tm)
+	p, err := b.imp.preview(b.tm)
+	if err == nil {
+		p.Locations = engine.ImportLocations(p.Diff, b.snap, b.effective(), b.imp.data())
+		p.CarsKnown = b.snap != nil
+	}
+	return p, err
 }
 
 func (b *vwBackend) ConfirmImport(token string) error {

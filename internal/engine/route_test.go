@@ -12,6 +12,7 @@ import (
 	"testing"
 	"time"
 
+	"run8-ops-center/internal/carstatus"
 	"run8-ops-center/internal/profile"
 	"run8-ops-center/internal/run8route"
 	"run8-ops-center/internal/run8route/run8routetest"
@@ -548,5 +549,94 @@ func TestViewMeasuresYardLocationsFromRouteData(t *testing.T) {
 	}
 	if v := bare.eng.View(); v.LocationFt != nil {
 		t.Errorf("no install: LocationFt = %v", v.LocationFt)
+	}
+}
+
+func TestPreviewMeasuresLocationsAndFindsCars(t *testing.T) {
+	h, _ := startWithInstall(t, run8routetest.Synthetic())
+	const prefix = run8routetest.Prefix
+	truck := func(section int) run8save.Truck { return run8save.Truck{RoutePrefix: prefix, Section: section} }
+	boxcar := func(unit string, sections ...int) run8save.Vehicle {
+		v := run8save.Vehicle{Model: "R8_Boxcar_X.xml", UnitType: "US_Freightcar", UnitNumber: unit}
+		for _, s := range sections {
+			v.Trucks = append(v.Trucks, truck(s))
+		}
+		return v
+	}
+	number := func(unit string) string { return carstatus.Number("R8_Boxcar_X.xml", unit) }
+
+	// A PreviewImport before any save knows no cars.
+	p, err := h.eng.PreviewImport()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if p.CarsKnown {
+		t.Error("CarsKnown before a save was loaded")
+	}
+
+	vs := []run8save.Vehicle{
+		boxcar("B1", run8routetest.SecBowl1, run8routetest.SecBowl1),
+		boxcar("B2", 99999, run8routetest.SecBowl1), // lead truck off the listed sections, trailing truck on Bowl 1
+		boxcar("S1", run8routetest.SecSiding1, run8routetest.SecSiding2), // one car across two sections of BRL
+	}
+	loco := boxcar("L1", run8routetest.SecBowl1, run8routetest.SecBowl1)
+	loco.UnitType = "US_DieselEngine"
+	vs = append(vs, loco)
+	for i := range 6 { // more cars on the siding than the sample holds
+		vs = append(vs, boxcar(string(rune('c'+i)), run8routetest.SecSiding2))
+	}
+	h.ingest(snapshotEvent(&run8save.Snapshot{Trains: []run8save.Train{{ID: "T1", Vehicles: vs}}}, "WorldSave.xml", false))
+
+	p, err = h.eng.PreviewImport()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !p.CarsKnown {
+		t.Error("CarsKnown with a save loaded")
+	}
+	feet := func(sections ...int) int {
+		m := 0.0
+		for _, s := range sections {
+			sec, ok := h.eng.route.Data.Topology.Section(s)
+			if !ok {
+				t.Fatalf("section %d unknown", s)
+			}
+			m += sec.LengthM
+		}
+		return int(math.Round(m * 3.28084))
+	}
+
+	bowl := p.Locations[trackmap.Location{Kind: trackmap.KindYard, Yard: "NOR", Track: "Bowl 1"}.Key()]
+	if want := feet(run8routetest.SecBowl1); bowl.LengthFt != want || want == 0 {
+		t.Errorf("Bowl 1 measures %d ft, want %d", bowl.LengthFt, want)
+	}
+	if bowl.Cars != 2 || len(bowl.CarNumbers) != 2 || bowl.CarNumbers[0] != number("B1") || bowl.CarNumbers[1] != number("B2") {
+		t.Errorf("Bowl 1 cars = %d %v, want the two cars and no locomotive", bowl.Cars, bowl.CarNumbers)
+	}
+
+	brl := p.Locations[trackmap.Location{Kind: trackmap.KindIndustry, Industries: []string{"BRL"}}.Key()]
+	if want := feet(run8routetest.SecSiding1, run8routetest.SecSiding2); brl.LengthFt != want {
+		t.Errorf("BRL measures %d ft, want %d", brl.LengthFt, want)
+	}
+	// S1 counts once, at its lead truck, plus the six cars.
+	if brl.Cars != 7 || len(brl.CarNumbers) != 5 || brl.CarNumbers[0] != number("S1") {
+		t.Errorf("BRL cars = %d %v, want 7 with 5 numbers", brl.Cars, brl.CarNumbers)
+	}
+
+	// A location nothing stands on has a length and no cars.
+	empty := p.Locations[trackmap.Location{Kind: trackmap.KindYard, Yard: "NOR", Track: "Bowl 4"}.Key()]
+	if empty.Cars != 0 || len(empty.CarNumbers) != 0 || empty.LengthFt == 0 {
+		t.Errorf("Bowl 4 = %+v", empty)
+	}
+
+	// Without route data nothing is measured, but the cars are still found.
+	got := ImportLocations(p.Diff, h.eng.snap, h.eng.eff, nil)
+	for k, l := range got {
+		if l.LengthFt != 0 {
+			t.Errorf("%s measures %d ft without route data", k, l.LengthFt)
+		}
+	}
+	if got[trackmap.Location{Kind: trackmap.KindYard, Yard: "NOR", Track: "Bowl 1"}.Key()].Cars != 2 {
+		t.Error("no route data: the cars on Bowl 1 are lost")
 	}
 }
