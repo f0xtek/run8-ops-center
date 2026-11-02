@@ -113,8 +113,8 @@ func vwNewBackend(t *testing.T, tm *trackmap.Map) *vwBackend {
 	return b
 }
 
-// effective applies the threshold overrides to a copy of the base profile, as the
-// engine does.
+// effective applies the threshold overrides and the departure marks to a copy of
+// the base profile, as the engine does.
 func (b *vwBackend) effective() *profile.Profile {
 	p := *b.base
 	p.RoadTrains = append([]profile.RoadTrain(nil), b.base.RoadTrains...)
@@ -126,6 +126,15 @@ func (b *vwBackend) effective() *profile.Profile {
 			if th.MaxCarAgeDays != nil {
 				p.RoadTrains[i].MaxCarAgeDays = *th.MaxCarAgeDays
 			}
+		}
+	}
+	p.Yards = append([]profile.Yard(nil), b.base.Yards...)
+	for i := range p.Yards {
+		for name, on := range b.settings.Departure[b.base.ID][p.Yards[i].Code] {
+			if p.Yards[i].Marks == nil {
+				p.Yards[i].Marks = map[string]bool{}
+			}
+			p.Yards[i].Marks[profile.TrackKey(name)] = on
 		}
 	}
 	return &p
@@ -260,6 +269,49 @@ func (b *vwBackend) SetThreshold(symbol string, minPct, maxAge *float64) error {
 		next[symbol] = th
 	}
 	b.settings.Thresholds = next
+	return nil
+}
+
+// SetDeparture stores the mark the way the engine does: a track set to its profile
+// default has no entry. It fails with the next setErr.
+func (b *vwBackend) SetDeparture(yard, track string, on bool) error {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	b.record("departure %s %s %v", yard, track, on)
+	if err := b.setErr; err != nil {
+		return err
+	}
+	y := b.base.YardByCode(yard)
+	if y == nil {
+		return fmt.Errorf("profile %s has no yard %q", b.base.ID, yard)
+	}
+	t, listed := y.TrackByName(track)
+	if listed && t.Kind != profile.TrackYard {
+		return fmt.Errorf("%s / %s is a %s", yard, t.Name, t.Kind)
+	}
+	marks := map[string]bool{}
+	for k, v := range b.settings.Departure[b.base.ID][yard] {
+		marks[k] = v
+	}
+	delete(marks, track)
+	if on != (listed && t.Departure) {
+		marks[track] = on
+	}
+	next := map[string]map[string]map[string]bool{b.base.ID: {}}
+	for id, ys := range b.settings.Departure {
+		for code, m := range ys {
+			if next[id] == nil {
+				next[id] = map[string]map[string]bool{}
+			}
+			next[id][code] = m
+		}
+	}
+	if len(marks) == 0 {
+		delete(next[b.base.ID], yard)
+	} else {
+		next[b.base.ID][yard] = marks
+	}
+	b.settings.Departure = next
 	return nil
 }
 

@@ -53,9 +53,14 @@ func genSum(cars []*carstatus.Car) (ft, tons float64) {
 	return ft, tons
 }
 
-// genInYard reports whether the car sits in the yard.
-func genInYard(c *carstatus.Car, yard string) bool {
-	return c.Loc.Kind == carstatus.LocYard && c.Loc.Yard == yard
+// inYard reports whether the car sits in the yard. When the yard has
+// departure tracks, the car must also stand on one of them.
+func (g *genCtx) inYard(c *carstatus.Car, yard string) bool {
+	if c.Loc.Kind != carstatus.LocYard || c.Loc.Yard != yard {
+		return false
+	}
+	set, ok := g.departure[yard]
+	return !ok || set[profile.TrackKey(c.Loc.Track)]
 }
 
 // genAtIndustry reports whether the car sits at the industry.

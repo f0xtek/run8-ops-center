@@ -118,7 +118,7 @@ func genRoadTotals(t *profile.RoadTrain, cars []*carstatus.Car) Totals {
 func (g *genCtx) waitingFor(t *profile.RoadTrain) []*carstatus.Car {
 	var out []*carstatus.Car
 	for _, c := range g.pool {
-		if !genInYard(c, t.Origin) {
+		if !g.inYard(c, t.Origin) {
 			continue
 		}
 		if g.trainBound(c, t) || g.stopSetsOut(t, c) {

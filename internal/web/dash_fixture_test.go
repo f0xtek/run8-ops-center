@@ -37,7 +37,8 @@ type dashWorld struct {
 // dashLoadWorld parses testdata/WorldSave.xml, loads the bundled profile and labels
 // enough sections that cars land in yards and at industries: every fourth
 // industry-bound car sits at its industry, other industry-bound and train-bound
-// cars sit on NOR bowl tracks, and the rest stay unmapped.
+// cars sit on NOR forwarding tracks, which are departure tracks, and the rest
+// stay unmapped.
 func dashLoadWorld(t *testing.T) *dashWorld {
 	t.Helper()
 	dir := t.TempDir()
@@ -71,7 +72,7 @@ func dashLoadWorld(t *testing.T) *dashWorld {
 		case c.Dest.Kind == carstatus.DestIndustry && i%4 == 0:
 			tm.Set(tk.RoutePrefix, tk.Section, trackmap.Label{Kind: trackmap.KindIndustry, Industries: []string{c.Dest.Industry}})
 		case c.Dest.Kind == carstatus.DestIndustry || c.Dest.Kind == carstatus.DestTrain:
-			tm.Set(tk.RoutePrefix, tk.Section, trackmap.Label{Kind: trackmap.KindYard, Yard: "NOR", Track: fmt.Sprintf("Bowl %d", 1+i%20)})
+			tm.Set(tk.RoutePrefix, tk.Section, trackmap.Label{Kind: trackmap.KindYard, Yard: "NOR", Track: fmt.Sprintf("WF%02d", 1+i%7)})
 		}
 	}
 	st, _ := carstatus.Derive(snap, p, tm, nil)
@@ -268,6 +269,7 @@ func (f *dashSim) RenameLocation(old, new trackmap.Location) (int, error) {
 	return 0, errors.New("unused")
 }
 func (f *dashSim) SetThreshold(string, *float64, *float64) error { return errors.New("unused") }
+func (f *dashSim) SetDeparture(string, string, bool) error       { return errors.New("unused") }
 func (f *dashSim) SetInstallDir(string) error                    { return errors.New("unused") }
 func (f *dashSim) SetServer(int, bool) error                     { return errors.New("unused") }
 func (f *dashSim) SwitchProfile(string) error                    { return errors.New("unused") }

@@ -31,6 +31,11 @@ type Settings struct {
 	AllInterfaces bool                 `json:"allInterfaces"`
 	NoBrowser     bool                 `json:"noBrowser"`
 	Thresholds    map[string]Threshold `json:"thresholds,omitempty"` // by train symbol
+	// Departure holds the user's departure track marks that differ from the
+	// profile: profile id, then yard code, then track name as displayed. True
+	// marks a track as a departure track and false unmarks one the profile
+	// marks.
+	Departure map[string]map[string]map[string]bool `json:"departure,omitempty"`
 }
 
 // DefaultSettings returns the settings used when no file exists.

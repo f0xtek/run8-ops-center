@@ -37,6 +37,10 @@ type genCtx struct {
 	yardHomed map[string]map[string]bool
 	// yardStops maps a yard code to the yard stops of every road train there.
 	yardStops map[string][]profile.Stop
+	// departure maps a yard code to its departure tracks, by profile.TrackKey.
+	// A yard with no departure tracks has no entry, and every yard track
+	// counts.
+	departure map[string]map[string]bool
 }
 
 func newGenCtx(in GenInput) *genCtx {
@@ -46,6 +50,7 @@ func newGenCtx(in GenInput) *genCtx {
 		reserved:  genReservedKeys(in.Active),
 		yardHomed: map[string]map[string]bool{},
 		yardStops: map[string][]profile.Stop{},
+		departure: map[string]map[string]bool{},
 	}
 	if in.Status.Snapshot != nil {
 		g.now = in.Status.Snapshot.GameDate
@@ -58,6 +63,12 @@ func newGenCtx(in GenInput) *genCtx {
 	}
 	sort.SliceStable(g.pool, func(i, j int) bool { return genOlder(g.pool[i], g.pool[j]) })
 
+	for i := range in.Profile.Yards {
+		y := &in.Profile.Yards[i]
+		if set := y.DepartureSet(); set != nil {
+			g.departure[y.Code] = set
+		}
+	}
 	for i := range in.Profile.LocalJobs {
 		j := &in.Profile.LocalJobs[i]
 		set := g.yardHomed[j.HomeYard]

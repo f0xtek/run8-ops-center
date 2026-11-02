@@ -434,17 +434,18 @@ func TestRun8StateFollowsTheFiles(t *testing.T) {
 
 // yardTracksRE matches the `tracks:` block of a bundled yard, which a version-2
 // profile does not have. receivingNamesRE matches the `names:` line of the
-// receiving rule, which a profile before version 4 does not have.
+// receiving rule, which a profile before version 4 does not have. A profile
+// before version 5 has no `departure: true` flags.
 var (
 	yardTracksRE     = regexp.MustCompile(`(?m)^    tracks:\n(?:      .*\n)+`)
 	receivingNamesRE = regexp.MustCompile(`(?m)^      names: .*\n`)
 )
 
 // TestStartupUpgradesAnOldProfile is the task 5.4 check: a data directory with
-// a version-2 or version-3 AGS profile and a track map starts with the current
+// a version-2, 3 or 4 AGS profile and a track map starts with the current
 // profile active, the old files kept as .v<old>.bak and the labels intact.
 func TestStartupUpgradesAnOldProfile(t *testing.T) {
-	for _, old := range []int{2, 3} {
+	for _, old := range []int{2, 3, 4} {
 		t.Run(fmt.Sprintf("v%d", old), func(t *testing.T) { upgradesAnOldProfile(t, old) })
 	}
 }
@@ -458,9 +459,16 @@ func upgradesAnOldProfile(t *testing.T, version int) {
 	}
 	pdir := filepath.Join(profiles, DefaultProfileID)
 	bundled := string(readFile(t, filepath.Join(pdir, profile.ProfileFile)))
-	body := receivingNamesRE.ReplaceAllString(bundled, "")
+	body := strings.ReplaceAll(bundled, ", departure: true", "")
 	if body == bundled {
-		t.Fatal("cannot build a version 3 profile from the bundled one")
+		t.Fatal("cannot build a version 4 profile from the bundled one")
+	}
+	if version <= 3 {
+		stripped := receivingNamesRE.ReplaceAllString(body, "")
+		if stripped == body {
+			t.Fatal("cannot build a version 3 profile from the bundled one")
+		}
+		body = stripped
 	}
 	if version == 2 {
 		body = yardTracksRE.ReplaceAllString(body, "")
@@ -499,6 +507,9 @@ func upgradesAnOldProfile(t *testing.T, version int) {
 	}
 	if names := v.Profile.Run8.TrackEnds[0].Names; len(names) != 14 {
 		t.Errorf("the upgraded profile has %d receiving names, want 14", len(names))
+	}
+	if n := len(v.Profile.YardByCode("NOR").DepartureSet()); n != 30 {
+		t.Errorf("the upgraded profile has %d NOR departure tracks, want 30", n)
 	}
 	bak := fmt.Sprintf(".v%d.bak", version)
 	for name, content := range old {

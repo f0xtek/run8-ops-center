@@ -55,7 +55,7 @@ func (g *genCtx) localOrder(job *profile.LocalJob) (Order, bool) {
 func (g *genCtx) homeYardBound(yard, tag string) []*carstatus.Car {
 	var out []*carstatus.Car
 	for _, c := range g.pool {
-		if genInYard(c, yard) && genIndustryBound(c, tag) {
+		if g.inYard(c, yard) && genIndustryBound(c, tag) {
 			out = append(out, c)
 		}
 	}

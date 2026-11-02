@@ -178,10 +178,13 @@ type Backend interface {
 	// ErrStaleImport when the route files or the track map changed since.
 	ConfirmImport(token string) error
 
-	// Settings commands. All are persisted; thresholds and the profile apply
-	// immediately, port/bind changes need a restart.
+	// Settings commands. All are persisted; thresholds, departure marks and
+	// the profile apply immediately, port/bind changes need a restart.
 	SetThreshold(symbol string, minLengthPct, maxCarAgeDays *float64) error // nil pointer clears that override
-	SetInstallDir(dir string) error                                         // validated by the store guard
+	// SetDeparture marks (on) or unmarks a yard track as a departure track.
+	// Setting a track to its profile default removes the saved mark.
+	SetDeparture(yard, track string, on bool) error
+	SetInstallDir(dir string) error // validated by the store guard
 	SetServer(port int, allInterfaces bool) error
 	SwitchProfile(id string) error
 }

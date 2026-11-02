@@ -85,7 +85,7 @@ func (g *genCtx) yardStopWork(s profile.Stop, lim profile.Limit, run *stopRun) g
 		tons -= c.GrossTons
 	}
 	for _, c := range g.pool {
-		if run.taken[c.Key] || !genInYard(c, s.Target) || !g.stopPicksUp(s, c) {
+		if run.taken[c.Key] || !g.inYard(c, s.Target) || !g.stopPicksUp(s, c) {
 			continue
 		}
 		if !genFits(lim, ft+c.LengthFt, tons+c.GrossTons) {

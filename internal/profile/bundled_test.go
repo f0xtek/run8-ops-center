@@ -148,6 +148,7 @@ func TestInstallBundledUpgradesOlderProfile(t *testing.T) {
 		{"schemaVersion: 1\n", 1},
 		{"schemaVersion: 2\n", 2},
 		{"schemaVersion: 3\n", 3},
+		{"schemaVersion: 4\n", 4},
 	} {
 		header := tc.header
 		bak := fmt.Sprintf(".v%d.bak", tc.old)
