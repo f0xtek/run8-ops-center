@@ -96,9 +96,9 @@ The Yards page shows a Listed tracks table for each yard that has a list. It giv
 
 ### Profile upgrade
 
-The import needs the version 2 AGS profile, which adds the Run8 folders, the hump and receiving-track rules and the yard anchors. Version 3 adds the yard track lists behind the track name hints. Version 4 adds the names of the 14 receiving tracks. When a newer bundled profile ships, the app upgrades the installed one at the next start. For each of `IndustryConfiguration.csv`, `train_limits.tsv` and `profile.yaml`, it saves the installed file as `<name>.v<old>.bak` and then writes the bundled file. An installed profile with the same or a newer version is left alone. The app never touches `trackmap.json`, so your labels stay. If you edited one of the three files, copy your changes back from the `.bak` copy by hand. To go back to the old profile, restore the `.bak` files.
+The import needs the version 2 AGS profile, which adds the Run8 folders, the hump and receiving-track rules and the yard anchors. Version 3 adds the yard track lists behind the track name hints. Version 4 adds the names of the 14 receiving tracks. Version 5 marks the Norris departure tracks. When a newer bundled profile ships, the app upgrades the installed one at the next start. For each of `IndustryConfiguration.csv`, `train_limits.tsv` and `profile.yaml`, it saves the installed file as `<name>.v<old>.bak` and then writes the bundled file. An installed profile with the same or a newer version is left alone. The app never touches `trackmap.json`, so your labels stay. If you edited one of the three files, copy your changes back from the `.bak` copy by hand. To go back to the old profile, restore the `.bak` files.
 
-If you imported before the upgrade, the next import previews the 14 receiving labels as changed, for example `NOR / Receiving 1` becomes `NOR / Receiving East Thoroughfare`. Orders use only the yard, so they do not change. The cars on those tracks start a new dwell time once, because the track name is part of the location key.
+If you imported before the upgrade, the next import previews the 14 receiving labels as changed, for example `NOR / Receiving 1` becomes `NOR / Receiving East Thoroughfare`. Neither the old nor the new names are departure tracks, so the cars that feed orders do not change. The cars on those tracks start a new dwell time once, because the track name is part of the location key.
 
 ## Orders
 
@@ -110,6 +110,20 @@ A local job order belongs to one local, such as AB45. It has one line for each i
 - A yard line drops a block at a satellite yard and brings back what other locals pulled there. A55 serves Tuscaloosa and A44 serves McCalla this way.
 
 A road train order becomes available when the cars waiting for the train reach a share of its maximum length. The default share is 50 percent, and you can change it per train in Setup. The order lists cars oldest first and stops at the train's maximum length and tonnage. It also shows the horsepower the train needs. Some road trains work a yard or an industry on the way, such as 131 setting out autoracks at McCalla. Through trains such as 346 have no origin yard and only pick up at their stops.
+
+### Departure tracks
+
+At Norris, trim crews pull cars out of the hump bowl into the East or West Forwarding yard, where trains are built. Orders take Norris cars only from departure tracks, so a car in the receiving yard or the bowl does not count until it is moved. This holds for local set-outs from the home yard, yard-line set-outs and pick-ups, the cars waiting for a road train at its origin, and yard-stop pick-ups. A road train's build percentage counts only the cars on departure tracks.
+
+The bundled AGS profile marks 30 Norris tracks as departure tracks. They are EF01 to EF07, Southern Outbound, WF01 to WF07, CAB 01, CAB 02 and the local yard tracks L02 to L14. Tuscaloosa, McCalla, Bessemer and 32nd St mark none. A yard with no departure tracks uses every one of its tracks.
+
+The Yards page states the rule for each yard. Each labelled yard track and each listed yard track shows whether it is a departure track, with a button to mark or unmark it. You can mark any yard track, including tracks the profile does not list, such as the Norris receiving tracks. Do this when a busy yard builds a train on a receiving track, and unmark the track afterwards. A track whose state differs from the profile carries a "changed from profile" tag. Sidings and main lines have no button. If you unmark every departure track of a yard, that yard uses all its tracks again.
+
+Orders change as soon as you press a button. The app saves the marks in `settings.json`, so a profile upgrade keeps them.
+
+A car labelled with a track name that is not a departure track no longer feeds Norris orders. This includes a hand-typed `NOR / All`. Relabel the car with a listed track name, or mark that track as a departure track.
+
+The rule changes only what orders use. A car in the bowl still shows as awaiting delivery or awaiting train, and the dashboard tiles do not change. A pick-up that returns to any Norris track still counts as returned. When the app upgrades to profile version 5, the cars still in the bowl or receiving drop out of the available orders at the next save. Orders in progress keep their cars.
 
 ### Order lifecycle
 
@@ -127,7 +141,7 @@ You can complete an In Progress order by hand, or cancel it to release its cars.
 The app keeps these files in the data folder.
 
 - `profiles/<id>/` holds the route profile, the industry configuration, the train limits and `trackmap.json`.
-- `settings.json` holds the port, the Run8 install folder, the profile choice and your per-train thresholds.
+- `settings.json` holds the port, the Run8 install folder, the profile choice, your per-train thresholds and your departure track marks.
 - `state.json` holds started and finished orders, how long each car has sat in place, and the activity log.
 
 The app never creates, changes, renames or deletes a file under `C:\Run8Studios\Run8 Train Simulator V3`. It refuses to start with a `--data` folder inside that directory, and it checks every write against the same rule, including paths that reach the install folder through a symbolic link.

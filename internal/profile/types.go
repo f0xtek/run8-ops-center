@@ -30,6 +30,9 @@ type YardTrack struct {
 	Name     string
 	LengthFt int // 0 when unknown
 	Kind     TrackKind
+	// Departure marks the track as one that feeds orders. Only TrackYard
+	// entries carry it.
+	Departure bool
 }
 
 // Yard is a named yard.
@@ -45,7 +48,16 @@ type Yard struct {
 	// Tracks lists the yard's tracks in profile order. Entries that failed
 	// validation are already dropped and are listed in Profile.Report.
 	Tracks []YardTrack
+	// Marks holds the user's departure marks, keyed by TrackKey. True marks
+	// the track as a departure track and false unmarks a track the profile
+	// marks. The profile file never fills it. The engine's effective profile
+	// does.
+	Marks map[string]bool
 }
+
+// TrackKey is the form of a track name that DepartureSet uses: whitespace
+// collapsed and upper case.
+func TrackKey(name string) string { return strings.ToUpper(NormTag(name)) }
 
 // TrackByName finds a listed track by name, ignoring case and extra
 // whitespace.
@@ -59,9 +71,43 @@ func (y *Yard) TrackByName(name string) (YardTrack, bool) {
 	return YardTrack{}, false
 }
 
+// DepartureSet returns the yard's departure tracks keyed by TrackKey: the
+// listed tracks that carry the flag, plus the names marked true, minus the
+// names marked false. It returns nil when there are none, which means every
+// yard track counts.
+func (y *Yard) DepartureSet() map[string]bool {
+	var set map[string]bool
+	for _, t := range y.Tracks {
+		if t.Departure && t.Kind == TrackYard {
+			if set == nil {
+				set = map[string]bool{}
+			}
+			set[TrackKey(t.Name)] = true
+		}
+	}
+	for name, on := range y.Marks {
+		key := TrackKey(name)
+		if key == "" {
+			continue
+		}
+		if !on {
+			delete(set, key)
+			continue
+		}
+		if set == nil {
+			set = map[string]bool{}
+		}
+		set[key] = true
+	}
+	if len(set) == 0 {
+		return nil
+	}
+	return set
+}
+
 // BundledSchemaVersion is the profile.yaml schemaVersion of the profile
 // embedded in this binary. Load refuses a profile with a newer version.
-const BundledSchemaVersion = 4
+const BundledSchemaVersion = 5
 
 // Run8Route is a Run8 route folder and the track section prefix it covers.
 type Run8Route struct {

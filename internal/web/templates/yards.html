@@ -11,6 +11,11 @@
   {{end}}
   </tbody>
 </table></div>{{end}}
+{{define "yards_dep"}}<form class="yards-dep" method="post" action="/yards/departure" data-async>
+  <input type="hidden" name="yard" value="{{.Yard}}"><input type="hidden" name="track" value="{{.Track}}"><input type="hidden" name="on" value="{{if .On}}false{{else}}true{{end}}">
+  {{if .On}}<span class="chip ready">departure track</span>{{else}}<span class="chip wait">not a departure track</span>{{end}}{{if .Changed}}<span class="chip off">changed from profile</span>{{end}}
+  <button type="submit" class="small">{{if .On}}Unmark{{else}}Mark as departure track{{end}}</button>
+</form>{{end}}
 {{define "main"}}
 <style>
 .yards-sub{display:grid;gap:10px;scroll-margin-top:110px}
@@ -21,8 +26,13 @@
 .yards-occ .bar{min-width:90px}
 .yards-over{color:var(--bad);font-weight:600}
 .yards-services{display:flex;gap:6px;flex-wrap:wrap}
+.yards-dep{display:inline-flex;gap:6px;align-items:center;flex-wrap:wrap;margin:0}
+.yards-notice{border-left:4px solid var(--ok);background:var(--soft);padding:10px 14px}
+.yards-err{border-left:4px solid var(--bad);background:var(--soft);padding:10px 14px}
 </style>
 {{with .Data}}
+{{with .Error}}<div class="yards-err" role="alert"><b>Not saved.</b> {{.}}</div>{{end}}
+{{with .Notice}}<div class="yards-notice" role="status">{{.}}</div>{{end}}
 <section class="card" aria-labelledby="yards-h">
   <h2 id="yards-h">Yards &amp; industries</h2>
   {{if not .HasProfile}}
@@ -51,9 +61,10 @@
       <span class="muted">{{.Cars}} car{{if ne .Cars 1}}s{{end}}, {{len .Tracks}} labelled track{{if ne (len .Tracks) 1}}s{{end}}</span>
       {{if .NotInProf}}<span class="chip off">not in profile</span>{{end}}
     </div>
+    {{with .Rule}}<p class="muted yards-rule">{{.}}</p>{{end}}
     {{range .Tracks}}
     <div class="yards-track">
-      <div class="yards-head"><strong>{{.Name}}</strong> <span class="muted">{{len .Cars}} car{{if ne (len .Cars) 1}}s{{end}}</span></div>
+      <div class="yards-head"><strong>{{.Name}}</strong> <span class="muted">{{len .Cars}} car{{if ne (len .Cars) 1}}s{{end}}</span>{{if .Dep.Show}}{{template "yards_dep" .Dep}}{{end}}</div>
       {{if .Cars}}{{template "yards_cars" .Cars}}{{else}}<p class="empty">Empty.</p>{{end}}
     </div>
     {{else}}
@@ -63,13 +74,14 @@
     <details class="yards-listed"{{if le (len .Listed) 20}} open{{end}}>
       <summary>Listed tracks: {{.Labelled}} of {{len .Listed}} labelled</summary>
       <div class="scroll"><table class="sl yards-listed-table">
-        <thead><tr><th>Track</th><th>Listed</th><th>Measured</th><th>Status</th></tr></thead>
+        <thead><tr><th>Track</th><th>Listed</th><th>Measured</th><th>Status</th><th>Departure</th></tr></thead>
         <tbody>
         {{range .Listed}}<tr>
           <td>{{.Name}}{{with .Kind}} <span class="muted">({{.}})</span>{{end}}</td>
           <td>{{with .ListedFt}}{{.}}{{else}}<span class="muted">unknown</span>{{end}}</td>
           <td>{{with .Measured}}{{.}}{{else}}<span class="muted">&ndash;</span>{{end}}</td>
           <td>{{if .Labelled}}{{.Cars}} car{{if ne .Cars 1}}s{{end}}{{else}}<span class="chip off">not labelled yet</span>{{end}}</td>
+          <td>{{if .Dep.Show}}{{template "yards_dep" .Dep}}{{else}}<span class="muted">&ndash;</span>{{end}}</td>
         </tr>
         {{end}}
         </tbody>

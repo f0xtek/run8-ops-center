@@ -5,7 +5,7 @@
 # folder. Edit this file freely. When a new version of the app ships a newer
 # schemaVersion, it replaces this file and keeps your old copy as
 # profile.yaml.v<old>.bak.
-schemaVersion: 4
+schemaVersion: 5
 id: ags-south-p1
 name: AGS South Phase 1 (NS Birmingham)
 
@@ -20,31 +20,38 @@ defaultAutoSaveDir: 'C:\Run8Studios\Run8 Train Simulator V3\Content\V3Routes\Reg
 # labels its sections as ignored. Norris receiving is left out, because the Run8
 # import names those tracks: the 14 receiving tracks, including the two
 # thoroughfares, come from the trackEnds rule at the end of this file.
+#
+# A yard track with "departure: true" is a departure track. When a yard has any,
+# orders count a car as in that yard only if it stands on one, so cars in the
+# bowl, in receiving or on an unlisted track do not feed orders. A yard with no
+# departure tracks counts every yard track. At Norris these are the forwarding
+# yards, the CAB tracks and the local yard. Mark or unmark any track in the
+# yards view. Those marks live in settings.json and are not written to this file.
 yards:
   - code: NOR
     name: Norris
     anchorMileposts: [Receiving Yard, West Forwarding Yard, East Forwarding Yard]
     tracks:
       # East forwarding
-      - {name: EF01, lengthFt: 2625}
-      - {name: EF02, lengthFt: 2625}
-      - {name: EF03, lengthFt: 2432}
-      - {name: EF04, lengthFt: 2530}
-      - {name: EF05, lengthFt: 7025}
-      - {name: EF06, lengthFt: 6835}
-      - {name: EF07, lengthFt: 6563}
-      - {name: Southern Outbound, lengthFt: 2478}
+      - {name: EF01, lengthFt: 2625, departure: true}
+      - {name: EF02, lengthFt: 2625, departure: true}
+      - {name: EF03, lengthFt: 2432, departure: true}
+      - {name: EF04, lengthFt: 2530, departure: true}
+      - {name: EF05, lengthFt: 7025, departure: true}
+      - {name: EF06, lengthFt: 6835, departure: true}
+      - {name: EF07, lengthFt: 6563, departure: true}
+      - {name: Southern Outbound, lengthFt: 2478, departure: true}
       - {name: East Thoroughfare, kind: main}
       # West forwarding
-      - {name: WF01, lengthFt: 11448}
-      - {name: WF02, lengthFt: 11455}
-      - {name: WF03, lengthFt: 11439}
-      - {name: WF04, lengthFt: 6188}
-      - {name: WF05, lengthFt: 6080}
-      - {name: WF06, lengthFt: 5730}
-      - {name: WF07, lengthFt: 5725}
-      - {name: CAB 01, lengthFt: 710}
-      - {name: CAB 02, lengthFt: 626}
+      - {name: WF01, lengthFt: 11448, departure: true}
+      - {name: WF02, lengthFt: 11455, departure: true}
+      - {name: WF03, lengthFt: 11439, departure: true}
+      - {name: WF04, lengthFt: 6188, departure: true}
+      - {name: WF05, lengthFt: 6080, departure: true}
+      - {name: WF06, lengthFt: 5730, departure: true}
+      - {name: WF07, lengthFt: 5725, departure: true}
+      - {name: CAB 01, lengthFt: 710, departure: true}
+      - {name: CAB 02, lengthFt: 626, departure: true}
       - {name: Old AGS Main, lengthFt: 7225, kind: main}
       # Pullbacks and hill
       - {name: East Pullback, lengthFt: 3887}
@@ -88,19 +95,19 @@ yards:
       - {name: Shop Thoroughfare West, lengthFt: 1170, kind: main}
       - {name: Shop Thoroughfare East, lengthFt: 752, kind: main}
       # Local yard
-      - {name: L02, lengthFt: 292}
-      - {name: L03, lengthFt: 376}
-      - {name: L04, lengthFt: 376}
-      - {name: L05, lengthFt: 710}
-      - {name: L06, lengthFt: 835}
-      - {name: L07, lengthFt: 910}
-      - {name: L08, lengthFt: 1040}
-      - {name: L09, lengthFt: 1085}
-      - {name: L10, lengthFt: 1212}
-      - {name: L11, lengthFt: 1253}
-      - {name: L12, lengthFt: 1380}
-      - {name: L13, lengthFt: 1455}
-      - {name: L14, lengthFt: 1588}
+      - {name: L02, lengthFt: 292, departure: true}
+      - {name: L03, lengthFt: 376, departure: true}
+      - {name: L04, lengthFt: 376, departure: true}
+      - {name: L05, lengthFt: 710, departure: true}
+      - {name: L06, lengthFt: 835, departure: true}
+      - {name: L07, lengthFt: 910, departure: true}
+      - {name: L08, lengthFt: 1040, departure: true}
+      - {name: L09, lengthFt: 1085, departure: true}
+      - {name: L10, lengthFt: 1212, departure: true}
+      - {name: L11, lengthFt: 1253, departure: true}
+      - {name: L12, lengthFt: 1380, departure: true}
+      - {name: L13, lengthFt: 1455, departure: true}
+      - {name: L14, lengthFt: 1588, departure: true}
   - code: TUS
     name: Tuscaloosa
     anchorMileposts: [Tuscaloosa MP 199.1]

@@ -2,6 +2,7 @@ package engine
 
 import (
 	"fmt"
+	"maps"
 	"os"
 	"path/filepath"
 	"slices"
@@ -134,11 +135,11 @@ func (e *Engine) profileWarnings() {
 	}
 }
 
-// effectiveProfile returns the base profile with the threshold overrides
-// applied and the anchor milepost findings added to its report. Neither the
-// base profile nor its report is modified.
+// effectiveProfile returns the base profile with the threshold overrides and
+// departure marks applied and the anchor milepost findings added to its
+// report. Neither the base profile nor its report is modified.
 func (e *Engine) effectiveProfile() *profile.Profile {
-	p := effective(e.base, e.settings.Thresholds)
+	p := effective(e.base, e.settings)
 	if len(e.anchorProblems) > 0 {
 		p.Report.Problems = append(slices.Clone(e.base.Report.Problems), e.anchorProblems...)
 	}
@@ -146,12 +147,14 @@ func (e *Engine) effectiveProfile() *profile.Profile {
 }
 
 // effective returns a copy of base with the per-train threshold overrides
-// applied to its road trains. base itself is never modified.
-func effective(base *profile.Profile, th map[string]store.Threshold) *profile.Profile {
+// applied to its road trains and the user's departure marks for base's profile
+// copied into its yards. Marks for a yard the profile does not define are
+// ignored. base itself is never modified.
+func effective(base *profile.Profile, s store.Settings) *profile.Profile {
 	p := *base
 	p.RoadTrains = slices.Clone(base.RoadTrains)
 	for i := range p.RoadTrains {
-		t, ok := th[p.RoadTrains[i].Symbol]
+		t, ok := s.Thresholds[p.RoadTrains[i].Symbol]
 		if !ok {
 			continue
 		}
@@ -160,6 +163,19 @@ func effective(base *profile.Profile, th map[string]store.Threshold) *profile.Pr
 		}
 		if t.MaxCarAgeDays != nil {
 			p.RoadTrains[i].MaxCarAgeDays = *t.MaxCarAgeDays
+		}
+	}
+	p.Yards = slices.Clone(base.Yards)
+	for i := range p.Yards {
+		marks := s.Departure[base.ID][p.Yards[i].Code]
+		if len(marks) == 0 {
+			continue
+		}
+		p.Yards[i].Marks = make(map[string]bool, len(marks))
+		for name, on := range marks {
+			if key := profile.TrackKey(name); key != "" {
+				p.Yards[i].Marks[key] = on
+			}
 		}
 	}
 	return &p
@@ -172,6 +188,17 @@ func cloneSettings(s store.Settings) store.Settings {
 			m[k] = cloneThreshold(t)
 		}
 		s.Thresholds = m
+	}
+	if s.Departure != nil {
+		d := make(map[string]map[string]map[string]bool, len(s.Departure))
+		for id, yards := range s.Departure {
+			ys := make(map[string]map[string]bool, len(yards))
+			for code, marks := range yards {
+				ys[code] = maps.Clone(marks)
+			}
+			d[id] = ys
+		}
+		s.Departure = d
 	}
 	return s
 }

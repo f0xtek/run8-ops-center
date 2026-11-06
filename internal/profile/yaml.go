@@ -67,9 +67,10 @@ type yardSchema struct {
 }
 
 type trackSchema struct {
-	Name     string `yaml:"name"`
-	LengthFt int    `yaml:"lengthFt"`
-	Kind     string `yaml:"kind"`
+	Name      string `yaml:"name"`
+	LengthFt  int    `yaml:"lengthFt"`
+	Kind      string `yaml:"kind"`
+	Departure bool   `yaml:"departure"`
 }
 
 // limitSchema overrides limits from the limits file. A nil field keeps the

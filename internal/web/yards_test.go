@@ -132,7 +132,7 @@ func TestYardsListsEveryYardAndTheirTracks(t *testing.T) {
 			t.Errorf("want %q in NOR block:\n%s", want, text)
 		}
 	}
-	if !strings.Contains(text, "Bowl 20 0 cars Empty.") {
+	if !strings.Contains(text, "Bowl 20 0 cars not a departure track Mark as departure track Empty.") {
 		t.Errorf("a labelled track with no cars should read Empty:\n%s", text)
 	}
 	tus := vwText(vwBetween(t, body, `id="yard-TUS"`, `id="yard-MCC"`))
