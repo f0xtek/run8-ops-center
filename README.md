@@ -182,7 +182,7 @@ bash .github/scripts/next-version_test.sh
 bash .github/scripts/check-title_test.sh
 ```
 
-The last two commands test the release scripts in `.github/scripts/`. CI runs the Go checks on Linux and Windows and the script tests on Linux. It does this for each push to a branch with no open pull request and for each pull request into `main`.
+The last two commands test the release scripts in `.github/scripts/`. CI runs `go vet` and the Go tests with `-race` on Linux, and the script tests on Linux. It also runs the Go checks on Windows, without `-race`, for each pull request into `main` and for each push to `main`. A push to a branch with no open pull request runs the Linux checks only.
 
 The tests use copies of Run8 saves in `testdata/`. The app itself never reads from `testdata/`.
 
