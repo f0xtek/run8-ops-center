@@ -7,7 +7,7 @@ Checks every code change automatically before it reaches `main`, so a broken bui
 ## Requirements
 
 ### Requirement: Checks on feature branches and pull requests
-The repository SHALL run the project checks on every push to a branch other than `main` and on every pull request that targets `main`. The checks are `go vet ./...` and the Go tests. The pull request run SHALL check on Linux and on Windows, because the app is released for Windows and developed on other systems. A branch push with no open pull request SHALL check on Linux only. The Linux tests SHALL use the race detector, and the Windows tests SHALL NOT. A failure in any check on any system that ran SHALL fail the run.
+The repository SHALL run `go vet ./...` and the Go tests on every push to a branch other than `main` and on every pull request that targets `main`. A pull request run SHALL check on Linux and Windows, because the app is released for Windows. A branch push with no open pull request SHALL check on Linux only. Linux SHALL use the race detector and Windows SHALL NOT. A failure on any system that ran SHALL fail the run.
 
 #### Scenario: Push to a feature branch
 - **WHEN** a commit is pushed to the branch `feat/dashboard-filters` and no pull request is open for it
