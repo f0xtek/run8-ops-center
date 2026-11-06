@@ -37,7 +37,7 @@
   - only the WF cars appear in available orders and build percentages;
   - relabelling a bowl cut as `WF02` makes its cars available on the next regeneration;
   - marking a receiving track in the yards view adds its cars without a restart, and the mark is still there after a restart.
-- [ ] 4.3 On the Run8 PC, pull, build and run against the real save. Verify that cars still in the bowl or receiving don't trigger orders, that orders appear once those cars are trimmed into the forwarding or local yard, and that marking a receiving track in the yards view makes its cars count.
+- [x] 4.3 On the Run8 PC, pull, build and run against the real save. Verify that cars still in the bowl or receiving don't trigger orders, that orders appear once those cars are trimmed into the forwarding or local yard, and that marking a receiving track in the yards view makes its cars count.
 
 ## Workflow follow-up
 

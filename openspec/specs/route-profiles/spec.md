@@ -160,7 +160,7 @@ A profile SHALL declare a schema version; a profile without one is version 1. At
 - **THEN** no file in the profile folder changes, and the profile load reports the parse error
 
 ### Requirement: Yard track lists
-A yard SHALL be able to list its tracks. Each entry has a name, an optional length in feet and a kind: yard track, siding or main line. Names SHALL be unique within a yard after whitespace normalisation. An entry with an empty or duplicate name, a negative length or an unknown kind SHALL be reported in the validation report and dropped, while the rest of the yard still loads.
+A yard SHALL be able to list its tracks. Each entry has a name, an optional length in feet, a kind (yard track, siding or main line) and an optional departure flag that only yard tracks may carry. Names SHALL be unique within a yard after whitespace normalisation. An entry with an empty or duplicate name, a negative length or an unknown kind SHALL be reported in the validation report and dropped, while the rest of the yard still loads.
 
 #### Scenario: AGS Tuscaloosa list
 - **WHEN** the AGS profile is active
@@ -173,3 +173,11 @@ A yard SHALL be able to list its tracks. Each entry has a name, an optional leng
 #### Scenario: Duplicate name in a yard
 - **WHEN** yard NOR lists `Shop 1` twice
 - **THEN** the validation report flags the second entry, and the first one still loads
+
+#### Scenario: AGS Norris departure tracks
+- **WHEN** the AGS profile is active
+- **THEN** yard NOR marks 30 departure tracks: EF01 to EF07, Southern Outbound, WF01 to WF07, CAB 01, CAB 02 and L02 to L14, and no other yard marks any
+
+#### Scenario: Departure flag on a siding
+- **WHEN** a yard lists a siding with the departure flag set
+- **THEN** the validation report flags the entry, and the siding loads without the flag
