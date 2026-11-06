@@ -45,7 +45,7 @@ A Go app that follows a Run8 Train Simulator V3 world save and generates freight
 
 ## CI and releases
 
-- Workflows are in `.github/workflows/`: `ci.yml` (branches and pull requests), `release.yml` (push to `main`) and `tests.yml` (the shared test job, run on Linux and Windows). Both must pass on both systems.
+- Workflows are in `.github/workflows/`: `ci.yml` (branches and pull requests), `release.yml` (push to `main`) and `tests.yml` (the shared test job). Linux runs `go test -race` on every run. Windows runs `go test` without `-race`, only on pull requests and on `main`, through the `windows` input of `tests.yml`. Both systems must pass.
 - CI runs once per push. A branch with an open pull request into `main` is tested by the pull request run, and the branch push run skips its jobs. This is the `gate` job in `ci.yml`.
 - `.github/scripts/` holds `next-version.sh`, `check-title.sh`, their shared grammar `conventional.sh`, and a test for each script. Run the tests with `bash .github/scripts/<name>_test.sh`.
 - Every push to `main` that holds a releasable commit publishes a GitHub release. The first release is `v0.1.0`. Before 1.0 a breaking change and a `feat` raise the minor number, and a `fix`, `perf` or `revert` raises the patch number. From 1.0 a breaking change raises the major number. Commits that are only `docs`, `ci`, `chore`, `build`, `test`, `style` or `refactor` publish nothing.

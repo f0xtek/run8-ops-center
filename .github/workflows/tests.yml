@@ -1,8 +1,14 @@
 name: Tests
 
 # The one definition of "tests pass". ci.yml and release.yml both call it.
+# Linux always runs with the race detector. Windows runs without it, and only
+# when the caller leaves `windows` on.
 on:
   workflow_call:
+    inputs:
+      windows:
+        type: boolean
+        default: true
 
 permissions:
   contents: read
@@ -13,7 +19,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest]
+        include: ${{ fromJSON(inputs.windows && '[{"os":"ubuntu-latest","race":"-race"},{"os":"windows-latest","race":""}]' || '[{"os":"ubuntu-latest","race":"-race"}]') }}
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
@@ -23,4 +29,4 @@ jobs:
       - name: go vet
         run: go vet ./...
       - name: go test
-        run: go test -race ./...
+        run: go test ${{ matrix.race }} ./...
