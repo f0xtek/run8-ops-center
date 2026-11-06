@@ -54,7 +54,7 @@ Unknown keys are an error, so a misspelled field stops the load instead of being
 
 | Field | Meaning |
 |---|---|
-| `schemaVersion` | Version of the profile format. Leave it out for version 1. The app refuses a profile whose version is newer than the one it supports, and the error names both numbers. The bundled AGS profile is version 4. |
+| `schemaVersion` | Version of the profile format. Leave it out for version 1. The app refuses a profile whose version is newer than the one it supports, and the error names both numbers. The bundled AGS profile is version 5. |
 | `id` | Profile ID. Defaults to the folder name. |
 | `name` | Display name. Defaults to the ID. |
 | `defaultSaveDir` | Run8 folder that holds the world saves. |
@@ -71,6 +71,7 @@ Unknown keys are an error, so a misspelled field stops the load instead of being
 | `yards[].tracks[].name` | Name of a track in the yard, for example `TY01`. Names must be unique within the yard after whitespace is collapsed and case is ignored. The app drops an entry with an empty or repeated name and reports it. |
 | `yards[].tracks[].lengthFt` | Length of the track in feet. Leave it out, or use `0`, when the length is unknown. The app drops an entry with a negative length and reports it. |
 | `yards[].tracks[].kind` | `yard` for a track that holds cars, `siding` or `main` for a siding or main line. Defaults to `yard`. The app drops an entry with any other value and reports it. |
+| `yards[].tracks[].departure` | `true` makes the track a departure track. Defaults to `false`. Only `yard` entries may set it. The app reports the flag on a `siding` or `main` entry and ignores it, and the entry still loads. |
 
 Learn mode uses anchors to suggest a yard for a cut that sits outside every labelled track, when an anchor lies within 3 km.
 
@@ -96,6 +97,20 @@ yards:
       - {name: TY01, lengthFt: 1379}
       - {name: Pass, lengthFt: 752, kind: siding}
 ```
+
+#### Departure tracks
+
+A departure track is a yard track where cars stand ready to leave. When a yard has at least one, orders count a car as in that yard only if it stands on a departure track. This covers local set-outs, yard-line set-outs and pick-ups, the cars waiting for a road train at its origin, and yard-stop pick-ups. A car on any other track of the yard, such as the bowl, a receiving track or an unlisted name, does not feed orders. A yard with no departure tracks counts every yard track.
+
+The bundled AGS profile marks 30 Norris tracks: `EF01` to `EF07`, `Southern Outbound`, `WF01` to `WF07`, `CAB 01`, `CAB 02` and `L02` to `L14`. Tuscaloosa, McCalla, Bessemer and 32nd St mark none.
+
+```yaml
+    tracks:
+      - {name: WF01, lengthFt: 11448, departure: true}
+      - {name: East Pullback, lengthFt: 3887}
+```
+
+The flag is only the default. In the yards view, the user can mark any yard track as a departure track, including tracks the profile does not list, and unmark a listed one. The app saves those marks in `settings.json`, so a profile upgrade does not change them. A yard's departure tracks are the profile's, plus the marked tracks, minus the unmarked ones.
 
 ### Local jobs
 
@@ -189,7 +204,7 @@ trackEnds:
     names: {1: Receiving East Thoroughfare, 2: R12, 3: R11, 4: R10, 5: R09, 6: R08, 7: R07, 8: R06, 9: R05, 10: R04, 11: R03, 12: R02, 13: R01, 14: Receiving West Thoroughfare}
 ```
 
-When a profile adds or changes `names`, the next import shows the renamed tracks as changed labels. Orders use only the yard, so they do not change. The cars on a renamed track start a new dwell time, because the location key changes.
+When a profile adds or changes `names`, the next import shows the renamed tracks as changed labels. Orders do not change unless a renamed track is a departure track, or the yard has no departure tracks. The cars on a renamed track start a new dwell time, because the location key changes.
 
 ## Validation report
 
@@ -206,7 +221,7 @@ Loading a profile never fails because of a validation problem. The loader loads 
 | `unmatched-model` | A car model in a save that matches no `carTypes` rule. This code comes from checking a save's models against the profile, not from loading. |
 | `invalid-run8` | A `run8` entry the app dropped: a region or folder name that is empty, absolute or contains a separator or `..`, a route prefix that is missing from `routePrefixes`, a hump with no controller name, a `trackEnds` pattern that does not compile or lacks the `n` and `end` groups, or a `trackEnds` name for a number below 1, an empty name, or a name that a lower number of the same rule already uses. A bad name leaves the rest of its rule in place. |
 | `unmatched-anchor` | A yard `anchorMileposts` name that matches no milepost station name. The app reports it after it reads the route data, so it appears in the report only then. |
-| `invalid-track` | A yard `tracks` entry the app dropped because its name is empty, its length is negative or its kind is not `yard`, `siding` or `main`. The rest of the yard still loads. |
+| `invalid-track` | A yard `tracks` entry with an empty name, a negative length or a kind that is not `yard`, `siding` or `main`, which the app drops. It also covers `departure: true` on a `siding` or `main` entry, which the app clears while the entry still loads. The rest of the yard still loads. |
 | `duplicate-track` | A yard `tracks` entry the app dropped because an earlier entry in the same yard has the same name. Names match after whitespace is collapsed and case is ignored. The first entry stays. |
 
 To clear an `orphan-tag` problem, add an alias, add the tag to a train's `classCodes`, or add it to a stop's `pickUp`.

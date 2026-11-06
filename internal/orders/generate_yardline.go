@@ -15,9 +15,9 @@ func (g *genCtx) yardLineWork(job *profile.LocalJob, yl profile.YardLine, claime
 	var w genWork
 	for _, c := range g.pool {
 		switch {
-		case genInYard(c, job.HomeYard) && !claimed[c.Key] && g.matches(c, yl.Carries):
+		case g.inYard(c, job.HomeYard) && !claimed[c.Key] && g.matches(c, yl.Carries):
 			w.setOuts = append(w.setOuts, c)
-		case genInYard(c, yl.Yard) && g.isBound(c) && !g.belongsAt(yl, c):
+		case g.inYard(c, yl.Yard) && g.isBound(c) && !g.belongsAt(yl, c):
 			w.pickUps = append(w.pickUps, c)
 		}
 	}

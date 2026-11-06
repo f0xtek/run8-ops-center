@@ -130,11 +130,19 @@ func parse(t *testing.T, path string) *run8save.Snapshot {
 }
 
 // labelAllYard labels every unmapped section of every candidate as the yard
-// track NOR / All, so every car sits in the Norris yard.
+// track NOR / WF03, a Norris departure track, so every car sits where orders
+// take cars from.
 func (h *harness) labelAllYard() *View {
 	h.t.Helper()
+	return h.labelAllOn("WF03")
+}
+
+// labelAllOn labels every unmapped section of every candidate as the Norris
+// yard track with the given name.
+func (h *harness) labelAllOn(track string) *View {
+	h.t.Helper()
 	for _, c := range h.eng.View().Candidates {
-		if err := h.eng.LabelCandidate(c.TrainID, trackmap.Label{Kind: trackmap.KindYard, Yard: "NOR", Track: "All"}); err != nil {
+		if err := h.eng.LabelCandidate(c.TrainID, trackmap.Label{Kind: trackmap.KindYard, Yard: "NOR", Track: track}); err != nil {
 			h.t.Fatal(err)
 		}
 	}

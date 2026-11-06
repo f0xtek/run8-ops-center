@@ -95,7 +95,8 @@ func schemaVersionOf(v int) int {
 // same order as p.Yards. It drops an entry with an empty or repeated name, a
 // negative length or an unknown kind, and returns one problem for each
 // dropped entry. Names repeat when they match after whitespace normalisation
-// and case folding. The rest of the yard still loads.
+// and case folding. A departure flag on a siding or main is reported and
+// removed, and the entry still loads. The rest of the yard still loads.
 func buildYardTracks(p *Profile, yards []yardSchema) []Problem {
 	v := &validator{p: p, seen: map[string]bool{}}
 	for i, y := range yards {
@@ -123,7 +124,12 @@ func buildYardTracks(p *Profile, yards []yardSchema) []Problem {
 				continue
 			}
 			seen[key] = true
-			p.Yards[i].Tracks = append(p.Yards[i].Tracks, YardTrack{Name: name, LengthFt: t.LengthFt, Kind: kind})
+			departure := t.Departure
+			if departure && kind != TrackYard {
+				v.add(CodeInvalidTrack, name, "yard %s track %q is a %s, so it cannot be a departure track", code, name, kind)
+				departure = false
+			}
+			p.Yards[i].Tracks = append(p.Yards[i].Tracks, YardTrack{Name: name, LengthFt: t.LengthFt, Kind: kind, Departure: departure})
 		}
 	}
 	return v.out

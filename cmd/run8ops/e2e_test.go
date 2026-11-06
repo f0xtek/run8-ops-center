@@ -131,7 +131,7 @@ func TestOrderLifecycleThroughRealBinary(t *testing.T) {
 	// Learn mode: label every train's sections as one yard track.
 	for _, id := range trainIDs {
 		code, body := postForm(t, client, base+"trackmap/label", url.Values{
-			"kind": {"yard"}, "yard": {"NOR"}, "track": {"All"}, "train": {id},
+			"kind": {"yard"}, "yard": {"NOR"}, "track": {"WF03"}, "train": {id},
 		})
 		if code >= 500 {
 			t.Fatalf("labelling train %s: %d\n%s", id, code, body)

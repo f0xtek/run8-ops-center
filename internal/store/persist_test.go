@@ -27,6 +27,9 @@ func sampleSettings() Settings {
 			"386": {MinLengthPct: new(0.0), MaxCarAgeDays: new(14.0)},
 			"199": {},
 		},
+		Departure: map[string]map[string]map[string]bool{
+			"ags-south-p1": {"NOR": {"R07": true, "WF01": false}},
+		},
 	}
 }
 

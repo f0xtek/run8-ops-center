@@ -221,6 +221,65 @@ func (e *Engine) SetThreshold(symbol string, minLengthPct, maxCarAgeDays *float6
 	})
 }
 
+// SetDeparture marks (on) or unmarks a yard track as a departure track for
+// the active profile. A mark equal to the profile's own default is not kept,
+// so settings.json holds only differences. The orders are regenerated at once.
+func (e *Engine) SetDeparture(yard, track string, on bool) error {
+	return e.do(func() error {
+		y := e.base.YardByCode(yard)
+		if y == nil {
+			return fmt.Errorf("profile %s has no yard %q", e.base.ID, yard)
+		}
+		name := profile.NormTag(track)
+		if name == "" {
+			return errors.New("a departure mark needs a track name")
+		}
+		isDefault := false
+		if t, ok := y.TrackByName(name); ok {
+			if t.Kind != profile.TrackYard {
+				return fmt.Errorf("%s / %s is a %s, so it cannot be a departure track", y.Code, t.Name, t.Kind)
+			}
+			name, isDefault = t.Name, t.Departure
+		}
+
+		s := cloneSettings(e.settings)
+		marks := s.Departure[e.base.ID][y.Code]
+		for k := range marks {
+			if profile.TrackKey(k) == profile.TrackKey(name) {
+				delete(marks, k)
+			}
+		}
+		if on != isDefault {
+			if s.Departure == nil {
+				s.Departure = map[string]map[string]map[string]bool{}
+			}
+			if s.Departure[e.base.ID] == nil {
+				s.Departure[e.base.ID] = map[string]map[string]bool{}
+			}
+			if marks == nil {
+				marks = map[string]bool{}
+				s.Departure[e.base.ID][y.Code] = marks
+			}
+			marks[name] = on
+		}
+		if len(marks) == 0 {
+			delete(s.Departure[e.base.ID], y.Code)
+			if len(s.Departure[e.base.ID]) == 0 {
+				delete(s.Departure, e.base.ID)
+			}
+			if len(s.Departure) == 0 {
+				s.Departure = nil
+			}
+		}
+		if err := e.saveSettings(s); err != nil {
+			return err
+		}
+		e.eff = e.effectiveProfile()
+		e.recompute(false)
+		return e.finish()
+	})
+}
+
 // SetInstallDir sets the optional Run8 install folder, validated by the guard.
 // An empty dir clears it.
 func (e *Engine) SetInstallDir(dir string) error {
