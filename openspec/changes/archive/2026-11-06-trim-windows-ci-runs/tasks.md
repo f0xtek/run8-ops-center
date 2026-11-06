@@ -7,8 +7,8 @@
 
 ## 2. Verification
 
-- [ ] 2.1 Push the branch with no pull request and check on GitHub that the run has only the Linux test job. Verify that job names and the `gate` job are unchanged.
-- [ ] 2.2 Open the pull request and check that it runs both test jobs, with the Windows job running `go test ./...`. Verify with `openspec validate trim-windows-ci-runs --strict`.
+- [x] 2.1 Push the branch with no pull request and check on GitHub that the run has only the Linux test job. Verify that job names and the `gate` job are unchanged.
+- [x] 2.2 Open the pull request and check that it runs both test jobs, with the Windows job running `go test ./...`. Verify with `openspec validate trim-windows-ci-runs --strict`.
 
 ## Workflow follow-up
 
